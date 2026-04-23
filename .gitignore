@@ -1,0 +1,38 @@
+# Ambiente
+.env
+.env.local
+.env.*.local
+
+# SSH / Chaves
+*.pem
+*.key
+id_rsa*
+
+# Python
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Node
+node_modules/
+frontend/dist/
+npm-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
