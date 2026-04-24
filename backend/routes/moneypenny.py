@@ -143,10 +143,27 @@ async def send_test_summary(current_user: dict = Depends(get_current_user)):
 
     account = result.data[0]
     try:
-        graph = GraphClient(account["access_token"])
+        from services.microsoft_graph import refresh_access_token
+        from services.summary import _build_html
+
+        # Renew token if expired
+        token_expiry = datetime.fromisoformat(account["token_expiry"].replace("Z", "+00:00"))
+        if datetime.now(timezone.utc) >= token_expiry:
+            refreshed = refresh_access_token(account["refresh_token"])
+            new_expiry = datetime.now(timezone.utc) + timedelta(seconds=int(refreshed.get("expires_in", 3600)))
+            db.table("connected_accounts").update({
+                "access_token": refreshed["access_token"],
+                "refresh_token": refreshed.get("refresh_token") or account["refresh_token"],
+                "token_expiry": new_expiry.isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", account["id"]).execute()
+            access_token = refreshed["access_token"]
+        else:
+            access_token = account["access_token"]
+
+        graph = GraphClient(access_token)
         emails = graph.get_unread_emails_yesterday()
         events = graph.get_today_events()
-        from services.summary import _build_html
         html = _build_html(current_user["display_name"], emails, events)
         graph.send_mail(
             to_address=account["email"],
@@ -155,7 +172,7 @@ async def send_test_summary(current_user: dict = Depends(get_current_user)):
         )
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("Erro ao enviar resumo de teste para %s", account.get("email"))
         raise HTTPException(500, "Erro ao enviar resumo. Tente novamente.")
 
