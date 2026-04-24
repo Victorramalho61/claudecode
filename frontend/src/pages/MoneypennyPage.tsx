@@ -9,9 +9,14 @@ type Account = {
   updated_at?: string;
 };
 
+type DeliveryChannel = "email" | "teams" | "whatsapp";
+
 type Prefs = {
   send_hour_utc: number;
   active: boolean;
+  delivery_channel: DeliveryChannel;
+  teams_webhook_url: string;
+  whatsapp_phone: string;
 };
 
 export default function MoneypennyPage() {
@@ -19,7 +24,13 @@ export default function MoneypennyPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [account, setAccount] = useState<Account | null>(null);
-  const [prefs, setPrefs] = useState<Prefs>({ send_hour_utc: 10, active: true });
+  const [prefs, setPrefs] = useState<Prefs>({
+    send_hour_utc: 10,
+    active: true,
+    delivery_channel: "email",
+    teams_webhook_url: "",
+    whatsapp_phone: "",
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState(false);
@@ -109,13 +120,24 @@ export default function MoneypennyPage() {
     setTesting(true);
     try {
       await apiFetch("/api/moneypenny/test", { method: "POST", token });
-      showToast("E-mail de teste enviado! Verifique sua caixa de entrada.");
+      const label = prefs.delivery_channel === "teams"
+        ? "Mensagem enviada no Teams!"
+        : prefs.delivery_channel === "whatsapp"
+        ? "Mensagem enviada no WhatsApp!"
+        : "E-mail de teste enviado! Verifique sua caixa de entrada.";
+      showToast(label);
     } catch (e) {
       showToast(e instanceof ApiError ? e.message : "Falha ao enviar.");
     } finally {
       setTesting(false);
     }
   }
+
+  const channels: { value: DeliveryChannel; label: string; icon: string }[] = [
+    { value: "email", label: "E-mail", icon: "📧" },
+    { value: "teams", label: "Teams", icon: "💬" },
+    { value: "whatsapp", label: "WhatsApp", icon: "📱" },
+  ];
 
   if (loading) {
     return (
@@ -138,6 +160,7 @@ export default function MoneypennyPage() {
         Receba um resumo diário dos seus e-mails e agenda do Microsoft 365.
       </p>
 
+      {/* Conta Microsoft */}
       <section className="mt-6 rounded-xl border bg-white p-6 shadow-sm">
         <h3 className="font-semibold text-gray-900">Conta Microsoft 365</h3>
         {account?.connected ? (
@@ -158,7 +181,7 @@ export default function MoneypennyPage() {
           </div>
         ) : (
           <div className="mt-4">
-            <p className="text-sm text-gray-500 mb-3">Conecte sua conta para receber resumos por e-mail.</p>
+            <p className="text-sm text-gray-500 mb-3">Conecte sua conta para buscar e-mails e agenda.</p>
             <button
               onClick={handleConnect}
               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
@@ -172,6 +195,62 @@ export default function MoneypennyPage() {
         )}
       </section>
 
+      {/* Canal de entrega */}
+      <section className="mt-4 rounded-xl border bg-white p-6 shadow-sm">
+        <h3 className="font-semibold text-gray-900">Canal de entrega</h3>
+        <p className="mt-0.5 text-xs text-gray-500">Onde você quer receber o resumo diário</p>
+
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {channels.map((ch) => (
+            <button
+              key={ch.value}
+              onClick={() => setPrefs((p) => ({ ...p, delivery_channel: ch.value }))}
+              className={`flex flex-col items-center gap-1 rounded-xl border-2 py-4 text-sm font-medium transition-colors ${
+                prefs.delivery_channel === ch.value
+                  ? "border-blue-500 bg-blue-50 text-blue-700"
+                  : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              <span className="text-2xl">{ch.icon}</span>
+              {ch.label}
+            </button>
+          ))}
+        </div>
+
+        {prefs.delivery_channel === "teams" && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700">URL do Webhook do Teams</label>
+            <p className="mt-0.5 text-xs text-gray-400">
+              Configure um Incoming Webhook no Teams e cole a URL abaixo.
+            </p>
+            <input
+              type="url"
+              value={prefs.teams_webhook_url}
+              onChange={(e) => setPrefs((p) => ({ ...p, teams_webhook_url: e.target.value }))}
+              className="mt-2 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="https://..."
+            />
+          </div>
+        )}
+
+        {prefs.delivery_channel === "whatsapp" && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700">Número do WhatsApp</label>
+            <p className="mt-0.5 text-xs text-gray-400">
+              Formato internacional, sem espaços ou traços (ex: 5511999999999)
+            </p>
+            <input
+              type="tel"
+              value={prefs.whatsapp_phone}
+              onChange={(e) => setPrefs((p) => ({ ...p, whatsapp_phone: e.target.value }))}
+              className="mt-2 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="5511999999999"
+            />
+          </div>
+        )}
+      </section>
+
+      {/* Agendamento */}
       <section className="mt-4 rounded-xl border bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
@@ -214,7 +293,7 @@ export default function MoneypennyPage() {
                 disabled={saving}
                 className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
-                {saving ? "Salvando..." : "Salvar horário"}
+                {saving ? "Salvando..." : "Salvar"}
               </button>
               {account?.connected && (
                 <button
@@ -243,8 +322,8 @@ export default function MoneypennyPage() {
       </section>
 
       <p className="mt-4 text-xs text-gray-400">
-        O resumo inclui e-mails não lidos do dia anterior e compromissos do dia atual,
-        enviado para seu e-mail Microsoft 365.
+        O resumo inclui e-mails não lidos do dia anterior e compromissos do dia atual.
+        A conta Microsoft é necessária independente do canal escolhido.
       </p>
     </div>
   );

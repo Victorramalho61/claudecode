@@ -13,12 +13,15 @@ from services.microsoft_graph import GraphClient, build_auth_url, exchange_code_
 router = APIRouter(prefix="/moneypenny", tags=["moneypenny"])
 logger = logging.getLogger(__name__)
 
-_pending_states: dict[str, str] = {}  # state -> user_id (in-memory, single instance)
+_pending_states: dict[str, str] = {}
 
 
 class PrefsIn(BaseModel):
     send_hour_utc: int
     active: bool
+    delivery_channel: str = "email"
+    teams_webhook_url: str = ""
+    whatsapp_phone: str = ""
 
 
 def _resolve_user_id(current_user: dict) -> str:
@@ -107,20 +110,32 @@ def get_prefs(current_user: dict = Depends(get_current_user)):
     db = get_supabase()
     result = db.table("notification_prefs").select("*").eq("user_id", _resolve_user_id(current_user)).execute()
     if not result.data:
-        return {"send_hour_utc": 10, "active": True}
-    return result.data[0]
+        return {"send_hour_utc": 10, "active": True, "delivery_channel": "email", "teams_webhook_url": "", "whatsapp_phone": ""}
+    row = result.data[0]
+    return {
+        "send_hour_utc": row.get("send_hour_utc", 10),
+        "active": row.get("active", True),
+        "delivery_channel": row.get("delivery_channel") or "email",
+        "teams_webhook_url": row.get("teams_webhook_url") or "",
+        "whatsapp_phone": row.get("whatsapp_phone") or "",
+    }
 
 
 @router.put("/prefs")
 def save_prefs(body: PrefsIn, current_user: dict = Depends(get_current_user)):
     if not (0 <= body.send_hour_utc <= 23):
         raise HTTPException(400, "send_hour_utc deve ser entre 0 e 23")
+    if body.delivery_channel not in ("email", "teams", "whatsapp"):
+        raise HTTPException(400, "Canal inválido. Use email, teams ou whatsapp.")
     db = get_supabase()
     db.table("notification_prefs").upsert(
         {
             "user_id": _resolve_user_id(current_user),
             "send_hour_utc": body.send_hour_utc,
             "active": body.active,
+            "delivery_channel": body.delivery_channel,
+            "teams_webhook_url": body.teams_webhook_url,
+            "whatsapp_phone": body.whatsapp_phone,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         },
         on_conflict="user_id",
@@ -131,22 +146,27 @@ def save_prefs(body: PrefsIn, current_user: dict = Depends(get_current_user)):
 @router.post("/test")
 async def send_test_summary(current_user: dict = Depends(get_current_user)):
     db = get_supabase()
-    result = (
+    user_id = _resolve_user_id(current_user)
+
+    account_result = (
         db.table("connected_accounts")
         .select("*")
-        .eq("user_id", _resolve_user_id(current_user))
+        .eq("user_id", user_id)
         .eq("provider", "microsoft")
         .execute()
     )
-    if not result.data:
+    if not account_result.data:
         raise HTTPException(400, "Conta Microsoft não conectada")
 
-    account = result.data[0]
+    account = account_result.data[0]
+
+    prefs_result = db.table("notification_prefs").select("*").eq("user_id", user_id).execute()
+    prefs = prefs_result.data[0] if prefs_result.data else {}
+    channel = prefs.get("delivery_channel") or "email"
+
     try:
         from services.microsoft_graph import refresh_access_token
-        from services.summary import _build_html
 
-        # Renew token if expired
         token_expiry = datetime.fromisoformat(account["token_expiry"].replace("Z", "+00:00"))
         if datetime.now(timezone.utc) >= token_expiry:
             refreshed = refresh_access_token(account["refresh_token"])
@@ -164,16 +184,35 @@ async def send_test_summary(current_user: dict = Depends(get_current_user)):
         graph = GraphClient(access_token)
         emails = graph.get_unread_emails_yesterday()
         events = graph.get_today_events()
-        html = _build_html(current_user["display_name"], emails, events)
-        graph.send_mail(
-            to_address=account["email"],
-            subject=f"[TESTE] Resumo Moneypenny — {datetime.now(timezone.utc).strftime('%d/%m/%Y')}",
-            html_body=html,
-        )
+        date_str = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+
+        if channel == "teams":
+            webhook_url = prefs.get("teams_webhook_url") or ""
+            if not webhook_url:
+                raise HTTPException(400, "URL do webhook do Teams não configurada.")
+            from services.summary import send_teams
+            await send_teams(webhook_url, current_user["display_name"], emails, events)
+
+        elif channel == "whatsapp":
+            phone = prefs.get("whatsapp_phone") or ""
+            if not phone:
+                raise HTTPException(400, "Número de WhatsApp não configurado.")
+            from services.summary import send_whatsapp
+            await send_whatsapp(phone, current_user["display_name"], emails, events)
+
+        else:
+            from services.summary import _build_html
+            html = _build_html(current_user["display_name"], emails, events)
+            graph.send_mail(
+                to_address=account["email"],
+                subject=f"[TESTE] Resumo Moneypenny — {date_str}",
+                html_body=html,
+            )
+
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Erro ao enviar resumo de teste para %s", account.get("email"))
+        logger.exception("Erro ao enviar resumo de teste para user %s", user_id)
         raise HTTPException(500, "Erro ao enviar resumo. Tente novamente.")
 
-    return {"ok": True}
+    return {"ok": True, "channel": channel}

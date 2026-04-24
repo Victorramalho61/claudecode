@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     microsoft_client_secret: str = ""
     microsoft_redirect_uri: str = "http://localhost:8000/api/moneypenny/auth/microsoft/callback"
     frontend_url: str = "http://localhost:5173"
+    whatsapp_api_url: str = ""
+    whatsapp_api_key: str = ""
+    whatsapp_instance: str = ""
 
     model_config = {"env_file": ".env"}
 
