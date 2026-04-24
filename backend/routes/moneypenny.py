@@ -1,3 +1,4 @@
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -8,8 +9,10 @@ from pydantic import BaseModel
 from auth import get_current_user
 from db import get_settings, get_supabase
 from services.microsoft_graph import GraphClient, build_auth_url, exchange_code_for_tokens
+from services.summary import _build_html
 
 router = APIRouter(prefix="/moneypenny", tags=["moneypenny"])
+logger = logging.getLogger(__name__)
 
 _pending_states: dict[str, str] = {}  # state -> user_id (in-memory, single instance)
 
@@ -144,15 +147,16 @@ async def send_test_summary(current_user: dict = Depends(get_current_user)):
         graph = GraphClient(account["access_token"])
         emails = graph.get_unread_emails_yesterday()
         events = graph.get_today_events()
-
-        from services.summary import _build_html
         html = _build_html(current_user["display_name"], emails, events)
         graph.send_mail(
             to_address=account["email"],
             subject=f"[TESTE] Resumo Moneypenny — {datetime.now(timezone.utc).strftime('%d/%m/%Y')}",
             html_body=html,
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(500, f"Erro ao enviar: {e}")
+        logger.exception("Erro ao enviar resumo de teste para %s", account.get("email"))
+        raise HTTPException(500, "Erro ao enviar resumo. Tente novamente.")
 
     return {"ok": True}

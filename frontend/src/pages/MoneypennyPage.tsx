@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { apiFetch, ApiError } from "../lib/api";
 
 type Account = {
   connected: boolean;
@@ -26,8 +27,6 @@ export default function MoneypennyPage() {
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const headers = { Authorization: `Bearer ${token}` };
-
   const showToast = (msg: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     setToast(msg);
@@ -37,18 +36,22 @@ export default function MoneypennyPage() {
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
   const fetchData = useCallback(async () => {
-    const [accRes, prefsRes] = await Promise.all([
-      fetch("/api/moneypenny/account", { headers }),
-      fetch("/api/moneypenny/prefs", { headers }),
-    ]);
-    if (accRes.ok) setAccount(await accRes.json());
-    if (prefsRes.ok) setPrefs(await prefsRes.json());
-    setLoading(false);
+    try {
+      const [acc, pref] = await Promise.all([
+        apiFetch<Account>("/api/moneypenny/account", { token }),
+        apiFetch<Prefs>("/api/moneypenny/prefs", { token }),
+      ]);
+      setAccount(acc);
+      setPrefs(pref);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 0) showToast("Sem conexão com o servidor.");
+      setAccount({ connected: false });
+    } finally {
+      setLoading(false);
+    }
   }, [token]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
     if (searchParams.get("connected") === "1") {
@@ -59,58 +62,58 @@ export default function MoneypennyPage() {
 
   async function handleConnect() {
     try {
-      const r = await fetch("/api/moneypenny/auth/microsoft/url", { headers });
-      const data = await r.json();
-      if (!r.ok) { showToast(`Erro ao gerar link: ${data.detail ?? r.status}`); return; }
-      if (!data.url) { showToast("Backend não retornou URL de autenticação."); return; }
+      const data = await apiFetch<{ url: string }>("/api/moneypenny/auth/microsoft/url", { token });
       window.location.href = data.url;
     } catch (e) {
-      showToast(`Falha de conexão: ${e}`);
+      showToast(e instanceof ApiError ? `Erro: ${e.message}` : "Falha de conexão.");
     }
   }
 
   async function handleDisconnect() {
-    const r = await fetch("/api/moneypenny/account", { method: "DELETE", headers });
-    if (!r.ok) { showToast("Erro ao desconectar conta."); return; }
-    setAccount({ connected: false });
-    showToast("Conta desconectada.");
+    try {
+      await apiFetch("/api/moneypenny/account", { method: "DELETE", token });
+      setAccount({ connected: false });
+      showToast("Conta desconectada.");
+    } catch (e) {
+      showToast(e instanceof ApiError ? e.message : "Erro ao desconectar.");
+    }
   }
 
   async function handleSavePrefs() {
     setSaving(true);
-    const r = await fetch("/api/moneypenny/prefs", {
-      method: "PUT",
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify(prefs),
-    });
-    setSaving(false);
-    if (!r.ok) { showToast("Erro ao salvar preferências."); return; }
-    showToast("Preferências salvas.");
+    try {
+      await apiFetch("/api/moneypenny/prefs", { method: "PUT", token, json: prefs });
+      showToast("Preferências salvas.");
+    } catch (e) {
+      showToast(e instanceof ApiError ? e.message : "Erro ao salvar.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleToggleActive() {
     const newActive = !prefs.active;
     setToggling(true);
-    const r = await fetch("/api/moneypenny/prefs", {
-      method: "PUT",
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify({ ...prefs, active: newActive }),
-    });
-    setToggling(false);
-    if (!r.ok) { showToast("Erro ao alterar agendamento."); return; }
-    setPrefs((p) => ({ ...p, active: newActive }));
-    showToast(newActive ? "Agendamento ativado." : "Agendamento desativado.");
+    try {
+      await apiFetch("/api/moneypenny/prefs", { method: "PUT", token, json: { ...prefs, active: newActive } });
+      setPrefs((p) => ({ ...p, active: newActive }));
+      showToast(newActive ? "Agendamento ativado." : "Agendamento desativado.");
+    } catch (e) {
+      showToast(e instanceof ApiError ? e.message : "Erro ao alterar agendamento.");
+    } finally {
+      setToggling(false);
+    }
   }
 
   async function handleTest() {
     setTesting(true);
-    const r = await fetch("/api/moneypenny/test", { method: "POST", headers });
-    setTesting(false);
-    if (r.ok) {
+    try {
+      await apiFetch("/api/moneypenny/test", { method: "POST", token });
       showToast("E-mail de teste enviado! Verifique sua caixa de entrada.");
-    } else {
-      const data = await r.json().catch(() => ({}));
-      showToast(`Erro: ${(data as { detail?: string }).detail ?? "Falha ao enviar"}`);
+    } catch (e) {
+      showToast(e instanceof ApiError ? e.message : "Falha ao enviar.");
+    } finally {
+      setTesting(false);
     }
   }
 
@@ -135,19 +138,15 @@ export default function MoneypennyPage() {
         Receba um resumo diário dos seus e-mails e agenda do Microsoft 365.
       </p>
 
-      {/* Conexão */}
       <section className="mt-6 rounded-xl border bg-white p-6 shadow-sm">
         <h3 className="font-semibold text-gray-900">Conta Microsoft 365</h3>
-
         {account?.connected ? (
           <div className="mt-4 flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-900">{account.email}</p>
               <p className="text-xs text-gray-400">
                 Conectado em{" "}
-                {account.updated_at
-                  ? new Date(account.updated_at).toLocaleDateString("pt-BR")
-                  : "—"}
+                {account.updated_at ? new Date(account.updated_at).toLocaleDateString("pt-BR") : "—"}
               </p>
             </div>
             <button
@@ -159,9 +158,7 @@ export default function MoneypennyPage() {
           </div>
         ) : (
           <div className="mt-4">
-            <p className="text-sm text-gray-500 mb-3">
-              Conecte sua conta para receber resumos por e-mail.
-            </p>
+            <p className="text-sm text-gray-500 mb-3">Conecte sua conta para receber resumos por e-mail.</p>
             <button
               onClick={handleConnect}
               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
@@ -175,7 +172,6 @@ export default function MoneypennyPage() {
         )}
       </section>
 
-      {/* Agendamento */}
       <section className="mt-4 rounded-xl border bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
@@ -193,37 +189,26 @@ export default function MoneypennyPage() {
               prefs.active ? "bg-blue-600" : "bg-gray-300"
             }`}
           >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                prefs.active ? "translate-x-6" : "translate-x-1"
-              }`}
-            />
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+              prefs.active ? "translate-x-6" : "translate-x-1"
+            }`} />
           </button>
         </div>
 
         {prefs.active && (
           <div className="mt-5 border-t pt-5">
-            <label className="text-sm font-medium text-gray-700">
-              Horário de envio (BRT)
-            </label>
+            <label className="text-sm font-medium text-gray-700">Horário de envio (BRT)</label>
             <div className="mt-2 flex items-center gap-3">
               <select
                 value={prefs.send_hour_utc}
-                onChange={(e) =>
-                  setPrefs((p) => ({ ...p, send_hour_utc: Number(e.target.value) }))
-                }
+                onChange={(e) => setPrefs((p) => ({ ...p, send_hour_utc: Number(e.target.value) }))}
                 className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 {Array.from({ length: 24 }, (_, i) => i).map((utcH) => {
                   const brt = ((utcH - 3 + 24) % 24).toString().padStart(2, "0");
-                  return (
-                    <option key={utcH} value={utcH}>
-                      {brt}:00
-                    </option>
-                  );
+                  return <option key={utcH} value={utcH}>{brt}:00</option>;
                 })}
               </select>
-
               <button
                 onClick={handleSavePrefs}
                 disabled={saving}
@@ -231,7 +216,6 @@ export default function MoneypennyPage() {
               >
                 {saving ? "Salvando..." : "Salvar horário"}
               </button>
-
               {account?.connected && (
                 <button
                   onClick={handleTest}

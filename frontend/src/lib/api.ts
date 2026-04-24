@@ -1,9 +1,52 @@
 declare const __API_URL__: string;
-
-// Em dev: "" (o proxy do Vite resolve /api → localhost:8000)
-// Em produção: "https://seu-backend.railway.app"
 const BASE = typeof __API_URL__ !== "undefined" ? __API_URL__ : "";
 
-export function apiUrl(path: string): string {
-  return `${BASE}${path}`;
+export class ApiError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+type FetchOptions = Omit<RequestInit, "body"> & {
+  token?: string | null;
+  json?: unknown;
+};
+
+export async function apiFetch<T = unknown>(
+  path: string,
+  { token, json, ...init }: FetchOptions = {}
+): Promise<T> {
+  const headers: Record<string, string> = {
+    ...(init.headers as Record<string, string>),
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (json !== undefined) headers["Content-Type"] = "application/json";
+
+  let response: Response;
+  try {
+    response = await fetch(`${BASE}${path}`, {
+      ...init,
+      headers,
+      body: json !== undefined ? JSON.stringify(json) : undefined,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    throw new ApiError(0, "Sem conexão com o servidor.");
+  }
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new ApiError(
+      response.status,
+      (body as { detail?: string }).detail ?? `Erro ${response.status}`
+    );
+  }
+
+  const contentType = response.headers.get("content-type") ?? "";
+  if (response.status === 204 || !contentType.includes("application/json")) {
+    return {} as T;
+  }
+
+  return response.json() as Promise<T>;
 }
