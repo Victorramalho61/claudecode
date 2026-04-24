@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from db import get_settings, get_supabase
+from routes.auth import router as auth_router
 from routes.health import router as health_router
 
 logging.basicConfig(
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    get_supabase()  # warm singleton + fail fast if credentials are wrong
+    get_supabase()
     logger.info("Supabase client ready")
     yield
     logger.info("Shutdown")
@@ -46,3 +47,4 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 
 
 app.include_router(health_router, prefix="/api")
+app.include_router(auth_router, prefix="/api")

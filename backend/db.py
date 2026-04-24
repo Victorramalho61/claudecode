@@ -8,6 +8,11 @@ class Settings(BaseSettings):
     supabase_url: str
     supabase_key: str
     allowed_origins: str = "http://localhost:5173"
+    jwt_secret: str
+    jwt_expire_minutes: int = 480
+    ldap_server: str = ""
+    ldap_domain: str = ""
+    ldap_base_dn: str = ""
 
     model_config = {"env_file": ".env"}
 
