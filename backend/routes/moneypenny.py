@@ -167,19 +167,22 @@ def save_prefs(body: PrefsIn, current_user: dict = Depends(get_current_user)):
 async def _send_whatsapp_bg(phone: str, display_name: str, events: list[dict], user_id: str) -> None:
     from services.summary import _build_calendar_text
     import httpx as _httpx
+    log_event("info", "moneypenny", "WhatsApp bg: iniciando POST para Evolution API", user_id=user_id)
     try:
         text = _build_calendar_text(display_name, events)
         s = get_settings()
         url = f"{s.whatsapp_api_url.rstrip('/')}/message/sendText/{s.whatsapp_instance}"
+        log_event("info", "moneypenny", f"WhatsApp bg: enviando para {phone} | url={url}", user_id=user_id)
         timeout = _httpx.Timeout(connect=10.0, read=90.0, write=10.0, pool=5.0)
         async with _httpx.AsyncClient(timeout=timeout) as client:
             resp = await client.post(url, json={"number": phone, "text": text}, headers={"apikey": s.whatsapp_api_key})
+            log_event("info", "moneypenny", f"WhatsApp bg: resposta HTTP {resp.status_code}", user_id=user_id, detail=resp.text[:500])
             resp.raise_for_status()
-        log_event("info", "moneypenny", "Resumo WhatsApp enviado com sucesso", user_id=user_id)
+        log_event("info", "moneypenny", "WhatsApp bg: mensagem enviada com sucesso", user_id=user_id)
     except Exception as exc:
         detail = f"{type(exc).__name__}: {exc!r}"
         logger.exception("Erro ao enviar WhatsApp em background para user %s", user_id)
-        log_event("error", "moneypenny", "Erro ao enviar WhatsApp (background)", user_id=user_id, detail=detail)
+        log_event("error", "moneypenny", "WhatsApp bg: erro ao enviar", user_id=user_id, detail=detail)
 
 
 def _get_access_token(account: dict, db) -> str:

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { apiFetch, ApiError } from "../../lib/api";
 
@@ -31,6 +31,8 @@ export default function LogsPage() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "info" | "warning" | "error">("all");
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
@@ -47,6 +49,15 @@ export default function LogsPage() {
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
+  useEffect(() => {
+    if (autoRefresh) {
+      intervalRef.current = setInterval(fetchLogs, 5000);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    }
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [autoRefresh, fetchLogs]);
+
   const visible = filter === "all" ? logs : logs.filter((l) => l.level === filter);
 
   const counts = {
@@ -62,13 +73,25 @@ export default function LogsPage() {
           <h2 className="text-xl font-bold text-gray-900">Logs do sistema</h2>
           <p className="mt-0.5 text-sm text-gray-500">Últimas 300 entradas</p>
         </div>
-        <button
-          onClick={fetchLogs}
-          disabled={loading}
-          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
-        >
-          {loading ? "Carregando..." : "Atualizar"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAutoRefresh((v) => !v)}
+            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+              autoRefresh
+                ? "border-blue-500 bg-blue-50 text-blue-700"
+                : "border-gray-300 text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            {autoRefresh ? "⏳ Atualizando..." : "Auto-refresh"}
+          </button>
+          <button
+            onClick={fetchLogs}
+            disabled={loading}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+          >
+            {loading ? "..." : "Atualizar"}
+          </button>
+        </div>
       </div>
 
       {/* Counters */}
