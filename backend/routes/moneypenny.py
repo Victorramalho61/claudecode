@@ -225,6 +225,6 @@ async def send_test_summary(current_user: dict = Depends(get_current_user)):
         raise
     except Exception as exc:
         logger.exception("Erro ao enviar resumo de teste para user %s", user_id)
-        raise HTTPException(500, f"Erro ao enviar resumo: {exc}")
+        raise HTTPException(500, f"Erro ao enviar resumo: {type(exc).__name__}: {exc!r}")
 
     return {"ok": True, "channel": channel}
