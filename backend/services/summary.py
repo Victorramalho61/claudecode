@@ -180,7 +180,9 @@ async def send_whatsapp(phone: str, display_name: str, emails: list[dict], event
     number = phone.strip().replace("+", "").replace(" ", "").replace("-", "")
 
     url = f"{s.whatsapp_api_url.rstrip('/')}/message/sendText/{s.whatsapp_instance}"
-    async with httpx.AsyncClient(timeout=30) as client:
+    # Use connect timeout curto + read timeout longo (OCI free tier pode ser lento)
+    timeout = httpx.Timeout(connect=10.0, read=90.0, write=10.0, pool=5.0)
+    async with httpx.AsyncClient(timeout=timeout) as client:
         resp = await client.post(
             url,
             json={"number": number, "text": text},
