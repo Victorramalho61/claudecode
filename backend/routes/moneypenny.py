@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from auth import get_current_user
 from db import get_settings, get_supabase
+from services.app_logger import log_event
 from services.microsoft_graph import GraphClient, build_auth_url, exchange_code_for_tokens
 
 router = APIRouter(prefix="/moneypenny", tags=["moneypenny"])
@@ -224,7 +225,10 @@ async def send_test_summary(current_user: dict = Depends(get_current_user)):
     except HTTPException:
         raise
     except Exception as exc:
+        detail = f"{type(exc).__name__}: {exc!r}"
         logger.exception("Erro ao enviar resumo de teste para user %s", user_id)
-        raise HTTPException(500, f"Erro ao enviar resumo: {type(exc).__name__}: {exc!r}")
+        log_event("error", "moneypenny", "Erro ao enviar resumo de teste", user_id=user_id, detail=detail)
+        raise HTTPException(500, f"Erro ao enviar resumo: {detail}")
 
+    log_event("info", "moneypenny", f"Resumo de teste enviado via {channel}", user_id=user_id)
     return {"ok": True, "channel": channel}

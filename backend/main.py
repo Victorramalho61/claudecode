@@ -13,6 +13,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 from db import get_settings, get_supabase
+from routes.admin import router as admin_router
 from routes.auth import router as auth_router
 from routes.health import router as health_router
 from routes.moneypenny import router as moneypenny_router
@@ -55,3 +56,4 @@ app.include_router(health_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(moneypenny_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")

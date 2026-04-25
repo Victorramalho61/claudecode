@@ -6,6 +6,7 @@ import LoginPage from "./pages/LoginPage";
 import RequestAccessPage from "./pages/RequestAccessPage";
 import HomePage from "./pages/HomePage";
 import AccessManagementPage from "./pages/admin/AccessManagementPage";
+import LogsPage from "./pages/admin/LogsPage";
 import MoneypennyPage from "./pages/MoneypennyPage";
 import ProfilePage from "./pages/ProfilePage";
 import InitializePasswordPage from "./pages/InitializePasswordPage";
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/moneypenny" element={<MoneypennyPage />} />
             <Route path="/perfil" element={<ProfilePage />} />
             <Route path="/admin/acesso" element={<AccessManagementPage />} />
+            <Route path="/admin/logs" element={<LogsPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
