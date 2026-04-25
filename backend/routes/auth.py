@@ -22,6 +22,7 @@ class LoginRequest(BaseModel):
 class AccessRequest(BaseModel):
     username: str
     password: str
+    whatsapp_phone: str = ""
 
 
 class UserInfo(BaseModel):
@@ -128,6 +129,7 @@ async def request_access(body: AccessRequest) -> dict:
         "role": "admin" if is_first else "user",
         "active": is_first,
         "password_hash": password_hash,
+        "whatsapp_phone": body.whatsapp_phone.strip(),
     }).execute()
 
     logger.info("Solicitação de acesso: %s", email)
@@ -168,3 +170,30 @@ async def initialize_password(body: LoginRequest) -> dict:
 @router.get("/me", response_model=UserInfo)
 async def me(current_user: Annotated[dict, Depends(get_current_user)]) -> UserInfo:
     return UserInfo(**current_user)
+
+
+class ProfileUpdate(BaseModel):
+    display_name: str = ""
+    whatsapp_phone: str = ""
+
+
+@router.get("/profile")
+async def get_profile(current_user: Annotated[dict, Depends(get_current_user)]) -> dict:
+    db = get_supabase()
+    result = db.table("profiles").select("display_name,email,whatsapp_phone").eq("id", current_user["id"]).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Perfil não encontrado.")
+    return result.data[0]
+
+
+@router.put("/profile")
+async def update_profile(body: ProfileUpdate, current_user: Annotated[dict, Depends(get_current_user)]) -> dict:
+    db = get_supabase()
+    updates: dict = {}
+    if body.display_name.strip():
+        updates["display_name"] = body.display_name.strip()
+    if body.whatsapp_phone.strip():
+        updates["whatsapp_phone"] = body.whatsapp_phone.strip()
+    if updates:
+        db.table("profiles").update(updates).eq("id", current_user["id"]).execute()
+    return {"ok": True}

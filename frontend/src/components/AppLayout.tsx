@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, Link } from "react-router-dom";
 import { useAuth, Role } from "../context/AuthContext";
 
 type NavItem = {
@@ -24,7 +24,9 @@ export default function AppLayout() {
         <div className="flex items-center justify-between">
           <span className="text-base font-bold text-gray-900">Sistema</span>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-600">{user?.display_name}</span>
+            <Link to="/perfil" className="text-sm text-gray-600 hover:text-blue-600 hover:underline">
+              {user?.display_name}
+            </Link>
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                 user?.role === "admin"

@@ -7,6 +7,7 @@ import RequestAccessPage from "./pages/RequestAccessPage";
 import HomePage from "./pages/HomePage";
 import AccessManagementPage from "./pages/admin/AccessManagementPage";
 import MoneypennyPage from "./pages/MoneypennyPage";
+import ProfilePage from "./pages/ProfilePage";
 import InitializePasswordPage from "./pages/InitializePasswordPage";
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
           >
             <Route path="/" element={<HomePage />} />
             <Route path="/moneypenny" element={<MoneypennyPage />} />
+            <Route path="/perfil" element={<ProfilePage />} />
             <Route
               path="/admin/acesso"
               element={

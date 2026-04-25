@@ -108,16 +108,21 @@ def disconnect_account(current_user: dict = Depends(get_current_user)):
 @router.get("/prefs")
 def get_prefs(current_user: dict = Depends(get_current_user)):
     db = get_supabase()
-    result = db.table("notification_prefs").select("*").eq("user_id", _resolve_user_id(current_user)).execute()
+    user_id = _resolve_user_id(current_user)
+
+    profile_result = db.table("profiles").select("whatsapp_phone").eq("id", user_id).execute()
+    profile_phone = (profile_result.data[0].get("whatsapp_phone") or "") if profile_result.data else ""
+
+    result = db.table("notification_prefs").select("*").eq("user_id", user_id).execute()
     if not result.data:
-        return {"send_hour_utc": 10, "active": True, "delivery_channel": "email", "teams_webhook_url": "", "whatsapp_phone": ""}
+        return {"send_hour_utc": 10, "active": True, "delivery_channel": "email", "teams_webhook_url": "", "whatsapp_phone": profile_phone}
     row = result.data[0]
     return {
         "send_hour_utc": row.get("send_hour_utc", 10),
         "active": row.get("active", True),
         "delivery_channel": row.get("delivery_channel") or "email",
         "teams_webhook_url": row.get("teams_webhook_url") or "",
-        "whatsapp_phone": row.get("whatsapp_phone") or "",
+        "whatsapp_phone": row.get("whatsapp_phone") or profile_phone,
     }
 
 
@@ -128,9 +133,10 @@ def save_prefs(body: PrefsIn, current_user: dict = Depends(get_current_user)):
     if body.delivery_channel not in ("email", "teams", "whatsapp"):
         raise HTTPException(400, "Canal inválido. Use email, teams ou whatsapp.")
     db = get_supabase()
+    user_id = _resolve_user_id(current_user)
     db.table("notification_prefs").upsert(
         {
-            "user_id": _resolve_user_id(current_user),
+            "user_id": user_id,
             "send_hour_utc": body.send_hour_utc,
             "active": body.active,
             "delivery_channel": body.delivery_channel,
@@ -140,6 +146,8 @@ def save_prefs(body: PrefsIn, current_user: dict = Depends(get_current_user)):
         },
         on_conflict="user_id",
     ).execute()
+    if body.whatsapp_phone:
+        db.table("profiles").update({"whatsapp_phone": body.whatsapp_phone}).eq("id", user_id).execute()
     return {"ok": True}
 
 

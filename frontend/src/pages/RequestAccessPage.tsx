@@ -5,6 +5,7 @@ import { apiFetch, ApiError } from "../lib/api";
 export default function RequestAccessPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [whatsappPhone, setWhatsappPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -14,7 +15,7 @@ export default function RequestAccessPage() {
     setError("");
     setLoading(true);
     try {
-      await apiFetch("/api/auth/request-access", { method: "POST", json: { username, password } });
+      await apiFetch("/api/auth/request-access", { method: "POST", json: { username, password, whatsapp_phone: whatsappPhone } });
       setSuccess(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Erro ao solicitar acesso.");
@@ -80,6 +81,18 @@ export default function RequestAccessPage() {
               placeholder="••••••••"
               required
               autoComplete="current-password"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">WhatsApp</label>
+            <p className="mt-0.5 text-xs text-gray-400">Com DDD e código do país, sem espaços (ex: 5561999999999)</p>
+            <input
+              type="tel"
+              value={whatsappPhone}
+              onChange={(e) => setWhatsappPhone(e.target.value.replace(/\D/g, ""))}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="5561999999999"
             />
           </div>
 
