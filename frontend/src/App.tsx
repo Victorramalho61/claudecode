@@ -29,14 +29,7 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/moneypenny" element={<MoneypennyPage />} />
             <Route path="/perfil" element={<ProfilePage />} />
-            <Route
-              path="/admin/acesso"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <AccessManagementPage />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/admin/acesso" element={<AccessManagementPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

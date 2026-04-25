@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { apiFetch, ApiError } from "../../lib/api";
 
@@ -12,9 +12,109 @@ type Profile = {
   created_at: string;
 };
 
+type ProfileData = { display_name: string; email: string; whatsapp_phone: string };
+
+function UserProfileForm({
+  token,
+  username,
+  isSelf,
+}: {
+  token: string | null;
+  username: string;
+  isSelf: boolean;
+}) {
+  const [profile, setProfile] = useState<ProfileData>({ display_name: "", email: "", whatsapp_phone: "" });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showToast(msg: string) {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setToast(msg);
+    timerRef.current = setTimeout(() => setToast(null), 4000);
+  }
+
+  useEffect(() => {
+    setLoading(true);
+    const url = isSelf ? "/api/auth/profile" : `/api/users/${username}/profile`;
+    apiFetch<ProfileData>(url, { token })
+      .then(setProfile)
+      .catch(() => showToast("Erro ao carregar perfil."))
+      .finally(() => setLoading(false));
+  }, [username, isSelf, token]);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const url = isSelf ? "/api/auth/profile" : `/api/users/${username}/profile`;
+      const method = isSelf ? "PUT" : "PATCH";
+      await apiFetch(url, { method, token, json: { display_name: profile.display_name, whatsapp_phone: profile.whatsapp_phone } });
+      showToast("Perfil atualizado.");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Erro ao salvar.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <div className="mt-4 text-sm text-gray-400">Carregando perfil...</div>;
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-4 space-y-4 rounded-xl border bg-white p-6 shadow-sm">
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 rounded-lg bg-gray-900 px-4 py-3 text-sm text-white shadow-lg">
+          {toast}
+        </div>
+      )}
+      <div>
+        <label className="block text-sm font-medium text-gray-700">E-mail</label>
+        <input
+          type="text"
+          value={profile.email}
+          disabled
+          className="mt-1 block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Nome de exibição</label>
+        <input
+          type="text"
+          value={profile.display_name}
+          onChange={(e) => setProfile((p) => ({ ...p, display_name: e.target.value }))}
+          className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          placeholder="Nome completo"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700">WhatsApp</label>
+        <p className="mt-0.5 text-xs text-gray-400">Com DDD e código do país, sem espaços (ex: 5561999999999)</p>
+        <input
+          type="tel"
+          value={profile.whatsapp_phone}
+          onChange={(e) => setProfile((p) => ({ ...p, whatsapp_phone: e.target.value.replace(/\D/g, "") }))}
+          className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          placeholder="5561999999999"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={saving}
+        className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+      >
+        {saving ? "Salvando..." : "Salvar alterações"}
+      </button>
+    </form>
+  );
+}
+
 export default function AccessManagementPage() {
   const { token, user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role === "admin";
+
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [selectedUsername, setSelectedUsername] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -22,18 +122,21 @@ export default function AccessManagementPage() {
   const fetchProfiles = useCallback(async () => {
     try {
       const data = await apiFetch<Profile[]>("/api/users", { token });
-      // Pendentes primeiro, depois por data de criação
       data.sort((a, b) => {
         if (a.active !== b.active) return a.active ? 1 : -1;
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       });
       setProfiles(data);
+      if (!selectedUsername) {
+        const self = data.find((u) => u.username === currentUser?.username);
+        setSelectedUsername(self?.username ?? data[0]?.username ?? "");
+      }
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Erro ao carregar usuários.");
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, currentUser, selectedUsername]);
 
   useEffect(() => { fetchProfiles(); }, [fetchProfiles]);
 
@@ -63,7 +166,18 @@ export default function AccessManagementPage() {
     }
   }
 
+  if (!isAdmin) {
+    return (
+      <div className="p-8 max-w-lg">
+        <h2 className="text-xl font-bold text-gray-900">Meu Perfil</h2>
+        <p className="mt-1 text-sm text-gray-500">Atualize suas informações pessoais.</p>
+        <UserProfileForm token={token} username={currentUser?.username ?? ""} isSelf={true} />
+      </div>
+    );
+  }
+
   const pending = profiles.filter((p) => !p.active);
+  const selectedProfile = profiles.find((p) => p.username === selectedUsername);
 
   return (
     <div className="p-8">
@@ -71,15 +185,13 @@ export default function AccessManagementPage() {
       <p className="mt-1 text-sm text-gray-500">Gerencie usuários e perfis de acesso</p>
 
       {error && (
-        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
       {pending.length > 0 && (
         <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <p className="text-sm font-semibold text-amber-800">
-            {pending.length} solicitação{pending.length > 1 ? "ões" : ""} de acesso pendente{pending.length > 1 ? "s" : ""}
+            {pending.length} solicitação{pending.length > 1 ? "ões" : ""} pendente{pending.length > 1 ? "s" : ""}
           </p>
           <div className="mt-3 space-y-2">
             {pending.map((p) => (
@@ -104,16 +216,12 @@ export default function AccessManagementPage() {
       <div className="mt-4 overflow-hidden rounded-xl border bg-white shadow-sm">
         {loading ? (
           <div className="p-10 text-center text-sm text-gray-400">Carregando...</div>
-        ) : profiles.length === 0 ? (
-          <div className="p-10 text-center text-sm text-gray-400">Nenhum usuário encontrado.</div>
         ) : (
           <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50">
               <tr>
                 {["Usuário", "Email", "Perfil", "Status", "Desde"].map((h) => (
-                  <th key={h} className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    {h}
-                  </th>
+                  <th key={h} className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -121,8 +229,13 @@ export default function AccessManagementPage() {
               {profiles.map((p) => {
                 const isSelf = p.username === currentUser?.username;
                 const isDisabled = busy === p.username;
+                const isSelected = p.username === selectedUsername;
                 return (
-                  <tr key={p.id} className={`${isDisabled ? "opacity-50" : ""} ${!p.active ? "bg-amber-50/40" : ""}`}>
+                  <tr
+                    key={p.id}
+                    onClick={() => setSelectedUsername(p.username)}
+                    className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-gray-50"} ${isDisabled ? "opacity-50" : ""} ${!p.active ? "bg-amber-50/40" : ""}`}
+                  >
                     <td className="px-6 py-4">
                       <p className="font-medium text-gray-900">{p.display_name}</p>
                       <p className="text-xs text-gray-400">@{p.username}</p>
@@ -132,6 +245,7 @@ export default function AccessManagementPage() {
                       <select
                         value={p.role}
                         disabled={isSelf || isDisabled || !p.active}
+                        onClick={(e) => e.stopPropagation()}
                         onChange={(e) => handleRoleChange(p.username, e.target.value)}
                         className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -142,12 +256,8 @@ export default function AccessManagementPage() {
                     <td className="px-6 py-4">
                       <button
                         disabled={isSelf || isDisabled}
-                        onClick={() => handleToggleActive(p.username, !p.active)}
-                        className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                          p.active
-                            ? "bg-green-100 text-green-700 hover:bg-green-200"
-                            : "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                        }`}
+                        onClick={(e) => { e.stopPropagation(); handleToggleActive(p.username, !p.active); }}
+                        className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${p.active ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-amber-100 text-amber-700 hover:bg-amber-200"}`}
                       >
                         {p.active ? "Ativo" : "Pendente"}
                       </button>
@@ -162,6 +272,19 @@ export default function AccessManagementPage() {
           </table>
         )}
       </div>
+
+      {selectedProfile && (
+        <div className="mt-6">
+          <h3 className="text-base font-semibold text-gray-900">
+            Editar perfil — {selectedProfile.display_name}
+          </h3>
+          <UserProfileForm
+            token={token}
+            username={selectedUsername}
+            isSelf={selectedUsername === currentUser?.username}
+          />
+        </div>
+      )}
     </div>
   );
 }
