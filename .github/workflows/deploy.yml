@@ -35,7 +35,7 @@ jobs:
 
       - run: pip install -r requirements.txt pytest safety
 
-      - run: safety check -r requirements.txt
+      - run: safety scan -r requirements.txt
 
       - run: pytest -v
         env:
