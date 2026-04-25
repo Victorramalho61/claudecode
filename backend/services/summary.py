@@ -180,7 +180,7 @@ async def send_whatsapp(phone: str, display_name: str, emails: list[dict], event
     number = phone.strip().replace("+", "").replace(" ", "").replace("-", "")
 
     url = f"{s.whatsapp_api_url.rstrip('/')}/message/sendText/{s.whatsapp_instance}"
-    async with httpx.AsyncClient(timeout=15) as client:
+    async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(
             url,
             json={"number": number, "text": text},
