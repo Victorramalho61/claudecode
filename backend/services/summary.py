@@ -183,7 +183,7 @@ async def send_whatsapp(phone: str, display_name: str, emails: list[dict], event
     async with httpx.AsyncClient(timeout=15) as client:
         resp = await client.post(
             url,
-            json={"number": f"{number}@s.whatsapp.net", "text": text},
+            json={"number": number, "text": text},
             headers={"apikey": s.whatsapp_api_key},
         )
         resp.raise_for_status()
