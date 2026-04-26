@@ -11,7 +11,7 @@ async def health() -> dict[str, str]:
     settings = get_settings()
     db_status = "ok"
     try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
+        async with httpx.AsyncClient(timeout=8.0) as client:
             r = await client.get(
                 f"{settings.supabase_url}/rest/v1/",
                 headers={"apikey": settings.supabase_key},

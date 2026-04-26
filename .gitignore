@@ -36,3 +36,9 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Dumps e arquivos de migração com dados sensíveis
+*.dump
+import_data.sql
+cloud_dump.sql
+cloud_dump.dump

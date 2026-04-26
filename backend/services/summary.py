@@ -218,7 +218,7 @@ async def run_daily_summaries() -> None:
 
     prefs_result = (
         db.table("notification_prefs")
-        .select("user_id,delivery_channel,teams_webhook_url,whatsapp_phone")
+        .select("user_id,channels_config,teams_webhook_url,whatsapp_phone")
         .eq("active", True)
         .eq("send_hour_utc", current_hour_utc)
         .execute()
@@ -270,34 +270,52 @@ async def run_daily_summaries() -> None:
                 access_token = account["access_token"]
 
             graph = GraphClient(access_token)
-            emails = graph.get_unread_emails_yesterday()
-            events = graph.get_today_events()
+            channels: dict = pref.get("channels_config") or {}
+            enabled = {k: v for k, v in channels.items() if v.get("enabled")}
 
-            channel = pref.get("delivery_channel") or "email"
+            if not enabled:
+                logger.info("Nenhum canal habilitado para user %s, pulando", user_id)
+                continue
 
-            if channel == "teams":
-                webhook_url = pref.get("teams_webhook_url") or ""
-                if not webhook_url:
-                    logger.warning("Teams webhook não configurado para user %s", user_id)
-                    continue
-                await send_teams(webhook_url, profile["display_name"], emails, events)
+            emails_data: list[dict] | None = None
+            events_data: list[dict] | None = None
 
-            elif channel == "whatsapp":
-                phone = pref.get("whatsapp_phone") or ""
-                if not phone:
-                    logger.warning("Telefone WhatsApp não configurado para user %s", user_id)
-                    continue
-                await send_whatsapp(phone, profile["display_name"], emails, events)
+            for ch_name, ch_cfg in enabled.items():
+                content = ch_cfg.get("content", [])
+                needs_emails = "emails" in content
+                needs_events = "calendar" in content
 
-            else:
-                html = _build_html(profile["display_name"], emails, events)
-                graph.send_mail(
-                    to_address=account["email"],
-                    subject=f"☀️ Resumo do dia — {datetime.now(timezone.utc).strftime('%d/%m/%Y')}",
-                    html_body=html,
-                )
+                if needs_emails and emails_data is None:
+                    emails_data = graph.get_unread_emails_yesterday()
+                if needs_events and events_data is None:
+                    events_data = graph.get_today_events()
 
-            logger.info("Summary (%s) sent for user %s", channel, user_id)
+                emails_out = emails_data if needs_emails else []
+                events_out = events_data if needs_events else []
+
+                if ch_name == "email":
+                    html = _build_html(profile["display_name"], emails_out, events_out)
+                    graph.send_mail(
+                        to_address=account["email"],
+                        subject=f"☀️ Resumo do dia — {datetime.now(timezone.utc).strftime('%d/%m/%Y')}",
+                        html_body=html,
+                    )
+
+                elif ch_name == "teams":
+                    webhook_url = pref.get("teams_webhook_url") or ""
+                    if not webhook_url:
+                        logger.warning("Teams webhook não configurado para user %s", user_id)
+                        continue
+                    await send_teams(webhook_url, profile["display_name"], emails_out, events_out)
+
+                elif ch_name == "whatsapp":
+                    phone = pref.get("whatsapp_phone") or ""
+                    if not phone:
+                        logger.warning("Telefone WhatsApp não configurado para user %s", user_id)
+                        continue
+                    await send_whatsapp(phone, profile["display_name"], emails_out, events_out)
+
+            logger.info("Summary sent via %s for user %s", list(enabled.keys()), user_id)
 
         except Exception:
             logger.exception("Failed to send summary for user %s", user_id)
