@@ -1,3 +1,6 @@
+import type { SystemStatus } from "../../types/monitoring";
+import { STATUS_DOT, STATUS_STYLES, STATUS_LABEL } from "./StatusBadge";
+
 type Summary = { up: number; down: number; degraded: number; unknown: number };
 
 type Props = {
@@ -8,6 +11,8 @@ type Props = {
   onToggleAutoRefresh: () => void;
   onRefresh: () => void;
 };
+
+const PILL_ORDER: SystemStatus[] = ["down", "degraded", "up"];
 
 export default function SummaryBar({
   summary,
@@ -23,28 +28,19 @@ export default function SummaryBar({
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-sm font-medium text-gray-600">{total} sistema{total !== 1 ? "s" : ""}</span>
-        {summary.up > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-            {summary.up} UP
+
+        {PILL_ORDER.filter((s) => summary[s] > 0).map((s) => (
+          <span
+            key={s}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold border ${STATUS_STYLES[s]}`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[s]} ${s === "down" ? "animate-pulse" : ""}`} />
+            {summary[s]} {STATUS_LABEL[s]}
           </span>
-        )}
-        {summary.down > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-            {summary.down} FALHA
-          </span>
-        )}
-        {summary.degraded > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-            {summary.degraded} DEGRADADO
-          </span>
-        )}
+        ))}
+
         {lastRefresh && (
-          <span className="text-xs text-gray-400">
-            {lastRefresh.toLocaleTimeString("pt-BR")}
-          </span>
+          <span className="text-xs text-gray-400">{lastRefresh.toLocaleTimeString("pt-BR")}</span>
         )}
       </div>
 
@@ -52,9 +48,7 @@ export default function SummaryBar({
         <button
           onClick={onToggleAutoRefresh}
           className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-            autoRefresh
-              ? "border-blue-500 bg-blue-50 text-blue-700"
-              : "border-gray-300 text-gray-600 hover:bg-gray-50"
+            autoRefresh ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-300 text-gray-600 hover:bg-gray-50"
           }`}
         >
           {autoRefresh ? "⏳ Auto-refresh" : "Auto-refresh"}

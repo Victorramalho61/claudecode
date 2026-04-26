@@ -2,14 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { apiFetch, ApiError } from "../../lib/api";
-import type { ChecksPage, MonitoredSystem, SystemCheck, SystemStatus } from "../../types/monitoring";
-import StatusBadge from "../../components/monitoring/StatusBadge";
+import type { ChecksPage, MonitoredSystem, SystemCheck } from "../../types/monitoring";
+import StatusBadge, { STATUS_LABEL } from "../../components/monitoring/StatusBadge";
 import Sparkline from "../../components/monitoring/Sparkline";
 import SystemFormModal from "../../components/monitoring/SystemFormModal";
 
-const STATUS_LABEL: Record<SystemStatus, string> = {
-  up: "UP", down: "FALHA", degraded: "DEGRADADO", unknown: "DESCONHECIDO",
-};
+const LIMIT = 50;
 
 export default function SystemDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,10 +16,8 @@ export default function SystemDetailPage() {
   const [system, setSystem] = useState<MonitoredSystem | null>(null);
   const [checks, setChecks] = useState<SystemCheck[]>([]);
   const [total, setTotal] = useState(0);
-  const [tab, setTab] = useState<"history" | "logs">("history");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [offset, setOffset] = useState(0);
-  const LIMIT = 50;
   const [loading, setLoading] = useState(true);
   const [checksLoading, setChecksLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,15 +79,15 @@ export default function SystemDetailPage() {
     fetchChecks(newOffset, statusFilter);
   }
 
-  if (loading) return <div className="p-8 text-sm text-gray-400">Carregando...</div>;
+  if (loading) return <div className="p-4 sm:p-8 text-sm text-gray-400">Carregando...</div>;
   if (error || !system) return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error ?? "Sistema não encontrado"}</div>
     </div>
   );
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <button onClick={() => navigate(-1)} className="mb-4 text-sm text-gray-500 hover:text-gray-800">
         ← Voltar
       </button>
@@ -160,111 +156,82 @@ export default function SystemDetailPage() {
           </div>
         </div>
 
-        {/* Painel direito */}
+        {/* Painel direito — Histórico */}
         <div className="lg:col-span-2">
-          <div className="flex border-b">
-            {(["history", "logs"] as const).map((t) => (
+          <h3 className="mb-3 font-medium text-gray-900">Histórico de checks</h3>
+
+          <div className="mb-3 flex flex-wrap gap-2">
+            {(["", "up", "down", "degraded"] as const).map((s) => (
               <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
-                  tab === t
-                    ? "border-b-2 border-blue-600 text-blue-600"
-                    : "text-gray-500 hover:text-gray-800"
+                key={s}
+                onClick={() => applyFilter(s)}
+                className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  statusFilter === s
+                    ? "border-gray-900 bg-gray-900 text-white"
+                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
                 }`}
               >
-                {t === "history" ? "Histórico de checks" : "Logs"}
+                {s === "" ? "Todos" : STATUS_LABEL[s]}
               </button>
             ))}
           </div>
 
-          {tab === "history" && (
-            <div className="mt-4">
-              <div className="mb-3 flex gap-2">
-                {["", "up", "down", "degraded"].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => applyFilter(s)}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-                      statusFilter === s
-                        ? "border-gray-900 bg-gray-900 text-white"
-                        : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    {s === "" ? "Todos" : STATUS_LABEL[s as SystemStatus]}
-                  </button>
-                ))}
-              </div>
+          {checksLoading && <p className="text-sm text-gray-400">Carregando...</p>}
 
-              {checksLoading && <p className="text-sm text-gray-400">Carregando...</p>}
+          {!checksLoading && checks.length === 0 && (
+            <p className="py-8 text-center text-sm text-gray-400">Nenhum check encontrado.</p>
+          )}
 
-              {!checksLoading && checks.length === 0 && (
-                <p className="py-8 text-center text-sm text-gray-400">Nenhum check encontrado.</p>
-              )}
-
-              {!checksLoading && checks.length > 0 && (
-                <div className="overflow-hidden rounded-xl border bg-white">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
-                      <tr>
-                        <th className="px-4 py-3 text-left">Horário</th>
-                        <th className="px-4 py-3 text-left">Status</th>
-                        <th className="px-4 py-3 text-left">Latência</th>
-                        <th className="px-4 py-3 text-left">Detalhe</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {checks.map((chk) => (
-                        <tr key={chk.id} className="hover:bg-gray-50">
-                          <td className="whitespace-nowrap px-4 py-2.5 text-gray-600">
-                            {new Date(chk.checked_at).toLocaleString("pt-BR")}
-                          </td>
-                          <td className="px-4 py-2.5">
-                            <StatusBadge status={chk.status} size="sm" />
-                          </td>
-                          <td className="px-4 py-2.5 text-gray-600">
-                            {chk.latency_ms != null ? `${chk.latency_ms}ms` : "—"}
-                          </td>
-                          <td className="max-w-xs truncate px-4 py-2.5 text-xs text-gray-400">
-                            {chk.detail ?? "—"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {total > LIMIT && (
-                <div className="mt-3 flex justify-between text-sm text-gray-500">
-                  <button
-                    disabled={offset === 0}
-                    onClick={() => changePage(Math.max(0, offset - LIMIT))}
-                    className="rounded border border-gray-300 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-40"
-                  >
-                    ← Anterior
-                  </button>
-                  <span>{offset + 1}–{Math.min(offset + LIMIT, total)} de {total}</span>
-                  <button
-                    disabled={offset + LIMIT >= total}
-                    onClick={() => changePage(offset + LIMIT)}
-                    className="rounded border border-gray-300 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-40"
-                  >
-                    Próxima →
-                  </button>
-                </div>
-              )}
+          {!checksLoading && checks.length > 0 && (
+            <div className="overflow-x-auto rounded-xl border bg-white">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Horário</th>
+                    <th className="px-4 py-3 text-left">Status</th>
+                    <th className="px-4 py-3 text-left">Latência</th>
+                    <th className="px-4 py-3 text-left">Detalhe</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {checks.map((chk) => (
+                    <tr key={chk.id} className="hover:bg-gray-50">
+                      <td className="whitespace-nowrap px-4 py-2.5 text-gray-600">
+                        {new Date(chk.checked_at).toLocaleString("pt-BR")}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <StatusBadge status={chk.status} size="sm" />
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-600">
+                        {chk.latency_ms != null ? `${chk.latency_ms}ms` : "—"}
+                      </td>
+                      <td className="max-w-xs truncate px-4 py-2.5 text-xs text-gray-400">
+                        {chk.detail ?? "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 
-          {tab === "logs" && (
-            <div className="mt-4 text-sm text-gray-500">
-              <p>Veja os logs relacionados a este sistema na página de{" "}
-                <button onClick={() => navigate("/admin/logs")} className="text-blue-600 hover:underline">
-                  Logs
-                </button>{" "}
-                filtrando por módulo <code className="rounded bg-gray-100 px-1">monitoring</code>.
-              </p>
+          {total > LIMIT && (
+            <div className="mt-3 flex items-center justify-between text-sm text-gray-500">
+              <button
+                disabled={offset === 0}
+                onClick={() => changePage(Math.max(0, offset - LIMIT))}
+                className="rounded border border-gray-300 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-40"
+              >
+                ← Anterior
+              </button>
+              <span>{offset + 1}–{Math.min(offset + LIMIT, total)} de {total}</span>
+              <button
+                disabled={offset + LIMIT >= total}
+                onClick={() => changePage(offset + LIMIT)}
+                className="rounded border border-gray-300 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-40"
+              >
+                Próxima →
+              </button>
             </div>
           )}
         </div>
@@ -281,4 +248,3 @@ export default function SystemDetailPage() {
     </div>
   );
 }
-

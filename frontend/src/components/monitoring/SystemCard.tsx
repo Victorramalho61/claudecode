@@ -1,6 +1,5 @@
 import type { MonitoredSystem, SystemStatus } from "../../types/monitoring";
 import StatusBadge from "./StatusBadge";
-import Sparkline from "./Sparkline";
 
 const TYPE_LABEL: Record<string, string> = {
   http:      "HTTP",
@@ -9,11 +8,9 @@ const TYPE_LABEL: Record<string, string> = {
   custom:    "Custom",
 };
 
-const BORDER_DOWN: Record<SystemStatus, string> = {
-  up:       "",
+const BORDER_STATUS: Partial<Record<SystemStatus, string>> = {
   down:     "border-red-300",
   degraded: "border-amber-300",
-  unknown:  "",
 };
 
 type Props = { system: MonitoredSystem; onClick: () => void };
@@ -21,14 +18,11 @@ type Props = { system: MonitoredSystem; onClick: () => void };
 export default function SystemCard({ system, onClick }: Props) {
   const lc = system.last_check;
   const status: SystemStatus = lc ? lc.status : "unknown";
-  const borderClass = BORDER_DOWN[status];
-
-  const checksForSparkline = lc ? [lc] : [];
 
   return (
     <div
       onClick={onClick}
-      className={`cursor-pointer rounded-xl border bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-gray-300 ${borderClass} ${!system.enabled ? "opacity-60" : ""}`}
+      className={`cursor-pointer rounded-xl border bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-gray-300 ${BORDER_STATUS[status] ?? ""} ${!system.enabled ? "opacity-60" : ""}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -45,7 +39,7 @@ export default function SystemCard({ system, onClick }: Props) {
         </div>
       </div>
 
-      <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
         <span>
           <span className="font-medium text-gray-700">
             {system.uptime_24h != null ? `${system.uptime_24h}%` : "—"}
@@ -70,17 +64,15 @@ export default function SystemCard({ system, onClick }: Props) {
       )}
 
       {lc?.metrics && (
-        <div className="mt-2 flex gap-3 text-xs text-gray-500">
+        <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500">
           {lc.metrics.cpu_pct != null && <span>CPU {lc.metrics.cpu_pct}%</span>}
           {lc.metrics.ram_pct != null && <span>RAM {lc.metrics.ram_pct}%</span>}
           {lc.metrics.disk_pct != null && <span>Disco {lc.metrics.disk_pct}%</span>}
         </div>
       )}
 
-      <Sparkline checks={checksForSparkline} maxBars={48} className="mt-3 h-8 w-full" />
-
       {lc && (
-        <p className="mt-1 text-right text-xs text-gray-400">
+        <p className="mt-3 text-right text-xs text-gray-400">
           {new Date(lc.checked_at).toLocaleString("pt-BR")}
         </p>
       )}

@@ -11,6 +11,8 @@ const TYPE_OPTIONS: { value: SystemType; label: string }[] = [
 
 const INTERVAL_OPTIONS = [1, 5, 10, 15, 30, 60];
 
+const FIELD_CLASS = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+
 type Props = {
   system?: MonitoredSystem;
   token: string | null;
@@ -72,93 +74,93 @@ export default function SystemFormModal({ system, token, onClose, onSaved }: Pro
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b px-6 py-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
+      <div className="flex w-full max-w-lg flex-col rounded-t-xl bg-white shadow-xl sm:rounded-xl max-h-[92vh]">
+
+        {/* Header — fixo */}
+        <div className="flex shrink-0 items-center justify-between border-b px-4 py-4 sm:px-6">
           <h2 className="font-semibold text-gray-900">
             {isEdit ? "Editar sistema" : "Adicionar sistema"}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
 
-        <div className="space-y-4 px-6 py-5">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Nome *</label>
-            <input value={name} onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-              placeholder="Ex: Backend API" />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Descrição</label>
-            <input value={description} onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-              placeholder="Opcional" />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Tipo</label>
-            <select value={type} onChange={(e) => setType(e.target.value as SystemType)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
-              {TYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {type !== "metrics" && (
+        {/* Body — rola */}
+        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+          <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">URL</label>
-              <input value={url} onChange={(e) => setUrl(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                placeholder="http://..." />
+              <label className="mb-1 block text-sm font-medium text-gray-700">Nome *</label>
+              <input value={name} onChange={(e) => setName(e.target.value)}
+                className={FIELD_CLASS} placeholder="Ex: Backend API" />
             </div>
-          )}
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Intervalo de check</label>
-            <select value={interval} onChange={(e) => setInterval(Number(e.target.value))}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
-              {INTERVAL_OPTIONS.map((m) => (
-                <option key={m} value={m}>{m} {m === 1 ? "minuto" : "minutos"}</option>
-              ))}
-            </select>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Descrição</label>
+              <input value={description} onChange={(e) => setDescription(e.target.value)}
+                className={FIELD_CLASS} placeholder="Opcional" />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Tipo</label>
+              <select value={type} onChange={(e) => setType(e.target.value as SystemType)} className={FIELD_CLASS}>
+                {TYPE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {type !== "metrics" && (
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">URL</label>
+                <input value={url} onChange={(e) => setUrl(e.target.value)}
+                  className={FIELD_CLASS} placeholder="http://..." />
+              </div>
+            )}
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Intervalo de check</label>
+              <select value={interval} onChange={(e) => setInterval(Number(e.target.value))} className={FIELD_CLASS}>
+                {INTERVAL_OPTIONS.map((m) => (
+                  <option key={m} value={m}>{m} {m === 1 ? "minuto" : "minutos"}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Config (JSON opcional)</label>
+              <textarea value={configJson} onChange={(e) => setConfigJson(e.target.value)} rows={3}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder='{"timeout_seconds": 5, "expected_status": 200}' />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">Habilitado</span>
+              <button onClick={() => setEnabled((v) => !v)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? "bg-blue-600" : "bg-gray-300"}`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`} />
+              </button>
+            </div>
+
+            {error && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+            )}
           </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Config (JSON opcional)</label>
-            <textarea value={configJson} onChange={(e) => setConfigJson(e.target.value)} rows={3}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs focus:border-blue-500 focus:outline-none"
-              placeholder='{"timeout_seconds": 5, "expected_status": 200}' />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">Habilitado</span>
-            <button onClick={() => setEnabled((v) => !v)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? "bg-blue-600" : "bg-gray-300"}`}>
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`} />
-            </button>
-          </div>
-
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
-          )}
         </div>
 
-        <div className="flex items-center justify-between border-t px-6 py-4">
+        {/* Footer — fixo */}
+        <div className="flex shrink-0 items-center justify-between border-t px-4 py-4 sm:px-6">
           <div>
             {isEdit && !confirmDelete && (
-              <button onClick={() => setConfirmDelete(true)}
-                className="text-sm text-red-600 hover:text-red-800">
+              <button onClick={() => setConfirmDelete(true)} className="text-sm text-red-600 hover:text-red-800">
                 Excluir sistema
               </button>
             )}
             {isEdit && confirmDelete && (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-red-600">Confirmar exclusão?</span>
+                <span className="text-sm text-red-600">Confirmar?</span>
                 <button onClick={handleDelete} disabled={deleting}
                   className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
-                  {deleting ? "..." : "Confirmar"}
+                  {deleting ? "..." : "Excluir"}
                 </button>
                 <button onClick={() => setConfirmDelete(false)} className="text-sm text-gray-500 hover:text-gray-700">Cancelar</button>
               </div>
@@ -175,6 +177,7 @@ export default function SystemFormModal({ system, token, onClose, onSaved }: Pro
             </button>
           </div>
         </div>
+
       </div>
     </div>
   );

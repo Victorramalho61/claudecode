@@ -57,8 +57,8 @@ export default function MonitoringPage() {
   const summary = data?.summary ?? { up: 0, down: 0, degraded: 0, unknown: 0 };
 
   return (
-    <div className="p-8">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="p-4 sm:p-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Monitoramento</h2>
           <p className="mt-0.5 text-sm text-gray-500">Status dos sistemas em tempo real</p>
