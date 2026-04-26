@@ -1,4 +1,4 @@
-name: claudecode
+name: jarvis
 
 services:
 
@@ -182,7 +182,7 @@ services:
       STUDIO_PG_META_URL: http://meta:8080
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       DEFAULT_ORGANIZATION_NAME: Local
-      DEFAULT_PROJECT_NAME: claudecode
+      DEFAULT_PROJECT_NAME: Jarvis
       SUPABASE_URL: http://kong:8000
       SUPABASE_PUBLIC_URL: ${API_EXTERNAL_URL}
       SUPABASE_ANON_KEY: ${ANON_KEY}

@@ -1,4 +1,4 @@
-# claudecode — Documentação do Projeto
+# Jarvis — Documentação do Projeto
 
 ## Visão Geral
 
@@ -85,7 +85,7 @@ jwt.encode({"iss":"supabase-local","role":"service_role","exp":2051222400}, secr
 
 Arquivo: `schema.sql` — aplicar em um banco novo com:
 ```bash
-docker exec -i claudecode-db-1 bash -c \
+docker exec -i jarvis-db-1 bash -c \
   "PGPASSWORD='...' psql -U postgres -d postgres" < schema.sql
 ```
 
@@ -164,7 +164,7 @@ docker compose logs -f backend
 docker compose up -d --build backend
 
 # Acessar o banco diretamente
-docker exec -it claudecode-db-1 bash -c \
+docker exec -it jarvis-db-1 bash -c \
   "PGPASSWORD='...' psql -U postgres -d postgres"
 
 # Reiniciar tudo

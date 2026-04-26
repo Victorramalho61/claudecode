@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Shutdown")
 
 
-app = FastAPI(title="API", lifespan=lifespan)
+app = FastAPI(title="Jarvis", lifespan=lifespan)
 
 _settings = get_settings()
 _origins = [o.strip() for o in _settings.allowed_origins.split(",")]

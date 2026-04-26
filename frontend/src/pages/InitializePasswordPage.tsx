@@ -33,7 +33,7 @@ export default function InitializePasswordPage() {
       <div className="w-full max-w-sm rounded-xl border bg-white p-8 shadow-md">
         <h1 className="text-xl font-bold text-gray-900">Definir senha</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Primeiro acesso — defina sua senha para o sistema.
+          Primeiro acesso — defina sua senha para o Jarvis.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">

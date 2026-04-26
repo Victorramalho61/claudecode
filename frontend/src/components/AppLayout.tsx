@@ -23,7 +23,7 @@ export default function AppLayout() {
     <div className="flex min-h-screen flex-col">
       <header className="border-b bg-white px-6 py-3 shadow-sm">
         <div className="flex items-center justify-between">
-          <span className="text-base font-bold text-gray-900">Sistema</span>
+          <span className="text-base font-bold text-gray-900">Jarvis</span>
           <div className="flex items-center gap-3">
             <Link to="/perfil" className="text-sm text-gray-600 hover:text-blue-600 hover:underline">
               {user?.display_name}
