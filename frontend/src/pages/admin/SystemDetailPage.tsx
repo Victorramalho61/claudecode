@@ -90,8 +90,6 @@ export default function SystemDetailPage() {
     </div>
   );
 
-  const status: StatusBadge_Status = (system.last_check?.status ?? "unknown") as any;
-
   return (
     <div className="p-8">
       <button onClick={() => navigate(-1)} className="mb-4 text-sm text-gray-500 hover:text-gray-800">
@@ -284,5 +282,3 @@ export default function SystemDetailPage() {
   );
 }
 
-// alias para evitar conflito de nome
-type StatusBadge_Status = Parameters<typeof StatusBadge>[0]["status"];
