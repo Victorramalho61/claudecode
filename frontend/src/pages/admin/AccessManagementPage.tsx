@@ -1,6 +1,7 @@
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { apiFetch, ApiError } from "../../lib/api";
+import { useToast } from "../../hooks/useToast";
 
 type Profile = {
   id: string;
@@ -23,17 +24,10 @@ function UserProfileForm({
   username: string;
   isSelf: boolean;
 }) {
+  const { toast, showToast } = useToast();
   const [profile, setProfile] = useState<ProfileData>({ display_name: "", email: "", whatsapp_phone: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function showToast(msg: string) {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setToast(msg);
-    timerRef.current = setTimeout(() => setToast(null), 4000);
-  }
 
   useEffect(() => {
     setLoading(true);
@@ -83,7 +77,7 @@ function UserProfileForm({
           type="text"
           value={profile.display_name}
           onChange={(e) => setProfile((p) => ({ ...p, display_name: e.target.value }))}
-          className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-voetur-500 focus:outline-none focus:ring-1 focus:ring-voetur-500"
           placeholder="Nome completo"
         />
       </div>
@@ -94,14 +88,14 @@ function UserProfileForm({
           type="tel"
           value={profile.whatsapp_phone}
           onChange={(e) => setProfile((p) => ({ ...p, whatsapp_phone: e.target.value.replace(/\D/g, "") }))}
-          className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-voetur-500 focus:outline-none focus:ring-1 focus:ring-voetur-500"
           placeholder="5561999999999"
         />
       </div>
       <button
         type="submit"
         disabled={saving}
-        className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        className="rounded-lg bg-voetur-600 px-5 py-2 text-sm font-semibold text-white hover:bg-voetur-700 disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-voetur-500 focus:ring-offset-2"
       >
         {saving ? "Salvando..." : "Salvar alterações"}
       </button>
@@ -260,7 +254,7 @@ export default function AccessManagementPage() {
                   <tr
                     key={p.id}
                     onClick={() => setSelectedUsername(p.username)}
-                    className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-gray-50"} ${isDisabled ? "opacity-50" : ""} ${!p.active ? "bg-amber-50/40" : ""}`}
+                    className={`cursor-pointer transition-colors ${isSelected ? "bg-voetur-50" : "hover:bg-gray-50"} ${isDisabled ? "opacity-50" : ""} ${!p.active ? "bg-amber-50/40" : ""}`}
                   >
                     <td className="px-6 py-4">
                       <p className="font-medium text-gray-900">{p.display_name}</p>
@@ -273,7 +267,7 @@ export default function AccessManagementPage() {
                         disabled={isSelf || isDisabled || !p.active}
                         onClick={(e) => e.stopPropagation()}
                         onChange={(e) => handleRoleChange(p.username, e.target.value)}
-                        className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-voetur-500 focus:outline-none focus:ring-1 focus:ring-voetur-500 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="user">Usuário</option>
                         <option value="admin">Admin</option>

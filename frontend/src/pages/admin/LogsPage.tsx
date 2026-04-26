@@ -13,13 +13,13 @@ type LogEntry = {
 };
 
 const LEVEL_STYLES: Record<string, string> = {
-  info: "bg-blue-50 text-blue-700 border-blue-200",
+  info: "bg-voetur-50 text-voetur-700 border-voetur-200",
   warning: "bg-amber-50 text-amber-700 border-amber-200",
   error: "bg-red-50 text-red-700 border-red-200",
 };
 
 const LEVEL_DOT: Record<string, string> = {
-  info: "bg-blue-500",
+  info: "bg-voetur-500",
   warning: "bg-amber-500",
   error: "bg-red-500",
 };
@@ -78,7 +78,7 @@ export default function LogsPage() {
             onClick={() => setAutoRefresh((v) => !v)}
             className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
               autoRefresh
-                ? "border-blue-500 bg-blue-50 text-blue-700"
+                ? "border-voetur-500 bg-voetur-50 text-voetur-700"
                 : "border-gray-300 text-gray-600 hover:bg-gray-50"
             }`}
           >

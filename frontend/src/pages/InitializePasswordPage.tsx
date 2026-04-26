@@ -31,6 +31,17 @@ export default function InitializePasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-sm rounded-xl border bg-white p-8 shadow-md">
+        <div className="mb-4 flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-voetur-800">
+            <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
+            </svg>
+          </div>
+          <span className="text-sm font-black text-voetur-900 tracking-wide">JARVIS</span>
+        </div>
+
         <h1 className="text-xl font-bold text-gray-900">Definir senha</h1>
         <p className="mt-1 text-sm text-gray-500">
           Primeiro acesso — defina sua senha para o Jarvis.
@@ -43,7 +54,7 @@ export default function InitializePasswordPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-voetur-500 focus:outline-none focus:ring-1 focus:ring-voetur-500"
               placeholder="nome@voetur.com.br"
               required
               autoFocus
@@ -57,7 +68,7 @@ export default function InitializePasswordPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-voetur-500 focus:outline-none focus:ring-1 focus:ring-voetur-500"
               placeholder="mínimo 6 caracteres"
               required
               minLength={6}
@@ -71,7 +82,7 @@ export default function InitializePasswordPage() {
               type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-voetur-500 focus:outline-none focus:ring-1 focus:ring-voetur-500"
               placeholder="••••••••"
               required
               autoComplete="new-password"
@@ -83,14 +94,14 @@ export default function InitializePasswordPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="w-full rounded-lg bg-voetur-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-voetur-700 disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-voetur-500 focus:ring-offset-2"
           >
             {loading ? "Salvando..." : "Definir senha"}
           </button>
         </form>
 
         <p className="mt-4 text-center text-sm text-gray-500">
-          <Link to="/login" className="font-medium text-blue-600 hover:underline">
+          <Link to="/login" className="font-medium text-voetur-600 hover:text-voetur-700 hover:underline">
             Voltar ao login
           </Link>
         </p>

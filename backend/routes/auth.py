@@ -51,9 +51,7 @@ def _verify_password(password: str, hashed: str) -> bool:
 
 def _lookup_profile(identifier: str) -> dict | None:
     db = get_supabase()
-    result = db.table("profiles").select("*").eq("username", identifier).execute()
-    if not result.data:
-        result = db.table("profiles").select("*").eq("email", identifier).execute()
+    result = db.table("profiles").select("*").or_(f"username.eq.{identifier},email.eq.{identifier}").execute()
     return result.data[0] if result.data else None
 
 

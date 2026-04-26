@@ -64,6 +64,43 @@ def _enrich(system: dict, db) -> dict:
     return system
 
 
+def _bulk_enrich(systems: list[dict], db) -> list[dict]:
+    if not systems:
+        return systems
+    ids = [s["id"] for s in systems]
+    since_24h = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+
+    recent = (
+        db.table("system_checks").select("*")
+        .in_("system_id", ids)
+        .order("checked_at", desc=True)
+        .limit(max(50, len(ids) * 5))
+        .execute().data
+    )
+    hourly = (
+        db.table("system_checks").select("system_id,status")
+        .in_("system_id", ids)
+        .gte("checked_at", since_24h)
+        .limit(len(ids) * 300)
+        .execute().data
+    )
+
+    last_check_map: dict[str, dict] = {}
+    for r in recent:
+        last_check_map.setdefault(r["system_id"], r)
+
+    uptime_data: dict[str, list[str]] = {}
+    for r in hourly:
+        uptime_data.setdefault(r["system_id"], []).append(r["status"])
+
+    for s in systems:
+        sid = s["id"]
+        s["last_check"] = last_check_map.get(sid)
+        statuses = uptime_data.get(sid)
+        s["uptime_24h"] = round(sum(1 for st in statuses if st == "up") / len(statuses) * 100, 1) if statuses else None
+    return systems
+
+
 @router.post("/systems", status_code=201)
 def create_system(
     body: SystemIn,
@@ -94,7 +131,7 @@ def list_systems(
     if enabled is not None:
         q = q.eq("enabled", enabled)
     systems = q.execute().data
-    return [_enrich(s, db) for s in systems]
+    return _bulk_enrich(systems, db)
 
 
 @router.get("/systems/{system_id}")
@@ -145,7 +182,7 @@ def delete_system(
 def get_dashboard(current_user: dict = Depends(require_role("admin"))):
     db = get_supabase()
     systems = db.table("monitored_systems").select("*").order("created_at").execute().data
-    enriched = [_enrich(s, db) for s in systems]
+    enriched = _bulk_enrich(systems, db)
 
     summary = {"up": 0, "down": 0, "degraded": 0, "unknown": 0}
     for s in enriched:

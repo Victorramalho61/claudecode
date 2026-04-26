@@ -1,6 +1,7 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { apiFetch, ApiError } from "../lib/api";
+import { useToast } from "../hooks/useToast";
 
 type UserSummary = { id: string; username: string; display_name: string; email: string };
 type ProfileData = { display_name: string; email: string; whatsapp_phone: string };
@@ -9,19 +10,12 @@ export default function ProfilePage() {
   const { token, user } = useAuth();
   const isAdmin = user?.role === "admin";
 
+  const { toast, showToast } = useToast();
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [selectedUsername, setSelectedUsername] = useState<string>("");
   const [profile, setProfile] = useState<ProfileData>({ display_name: "", email: "", whatsapp_phone: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function showToast(msg: string) {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast(msg);
-    toastTimer.current = setTimeout(() => setToast(null), 4000);
-  }
 
   useEffect(() => {
     if (!isAdmin) {
@@ -95,7 +89,7 @@ export default function ProfilePage() {
           <select
             value={selectedUsername}
             onChange={(e) => setSelectedUsername(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-voetur-500 focus:outline-none focus:ring-1 focus:ring-voetur-500"
           >
             {users.map((u) => (
               <option key={u.id} value={u.username}>
@@ -127,7 +121,7 @@ export default function ProfilePage() {
                 type="text"
                 value={profile.display_name}
                 onChange={(e) => setProfile((p) => ({ ...p, display_name: e.target.value }))}
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-voetur-500 focus:outline-none focus:ring-1 focus:ring-voetur-500"
                 placeholder="Nome completo"
               />
             </div>
@@ -139,7 +133,7 @@ export default function ProfilePage() {
                 type="tel"
                 value={profile.whatsapp_phone}
                 onChange={(e) => setProfile((p) => ({ ...p, whatsapp_phone: e.target.value.replace(/\D/g, "") }))}
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-voetur-500 focus:outline-none focus:ring-1 focus:ring-voetur-500"
                 placeholder="5561999999999"
               />
             </div>
@@ -148,7 +142,7 @@ export default function ProfilePage() {
           <button
             type="submit"
             disabled={saving}
-            className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="rounded-lg bg-voetur-600 px-5 py-2 text-sm font-semibold text-white hover:bg-voetur-700 disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-voetur-500 focus:ring-offset-2"
           >
             {saving ? "Salvando..." : "Salvar alterações"}
           </button>

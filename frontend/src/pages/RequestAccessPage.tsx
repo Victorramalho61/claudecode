@@ -28,8 +28,8 @@ export default function RequestAccessPage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="w-full max-w-sm rounded-xl border bg-white p-8 shadow-md text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-voetur-100">
+            <svg className="h-6 w-6 text-voetur-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
@@ -37,7 +37,7 @@ export default function RequestAccessPage() {
           <p className="mt-2 text-sm text-gray-500">
             Seu acesso está sendo analisado pelo administrador. Você será notificado quando aprovado.
           </p>
-          <Link to="/login" className="mt-6 inline-block text-sm font-medium text-blue-600 hover:underline">
+          <Link to="/login" className="mt-6 inline-block text-sm font-medium text-voetur-600 hover:text-voetur-700 hover:underline">
             Voltar ao login
           </Link>
         </div>
@@ -48,6 +48,17 @@ export default function RequestAccessPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-sm rounded-xl border bg-white p-8 shadow-md">
+        <div className="mb-4 flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-voetur-800">
+            <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
+            </svg>
+          </div>
+          <span className="text-sm font-black text-voetur-900 tracking-wide">JARVIS</span>
+        </div>
+
         <h1 className="text-xl font-bold text-gray-900">Solicitar Acesso</h1>
         <p className="mt-1 text-sm text-gray-500">
           Use suas credenciais corporativas Microsoft
@@ -63,7 +74,7 @@ export default function RequestAccessPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-voetur-500 focus:outline-none focus:ring-1 focus:ring-voetur-500"
               placeholder="nome@voetur.com.br"
               required
               autoFocus
@@ -77,7 +88,7 @@ export default function RequestAccessPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-voetur-500 focus:outline-none focus:ring-1 focus:ring-voetur-500"
               placeholder="••••••••"
               required
               autoComplete="current-password"
@@ -91,7 +102,7 @@ export default function RequestAccessPage() {
               type="tel"
               value={whatsappPhone}
               onChange={(e) => setWhatsappPhone(e.target.value.replace(/\D/g, ""))}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-voetur-500 focus:outline-none focus:ring-1 focus:ring-voetur-500"
               placeholder="5561999999999"
             />
           </div>
@@ -101,7 +112,7 @@ export default function RequestAccessPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="w-full rounded-lg bg-voetur-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-voetur-700 disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-voetur-500 focus:ring-offset-2"
           >
             {loading ? "Verificando..." : "Solicitar Acesso"}
           </button>
@@ -109,7 +120,7 @@ export default function RequestAccessPage() {
 
         <p className="mt-4 text-center text-sm text-gray-500">
           Já tem acesso?{" "}
-          <Link to="/login" className="font-medium text-blue-600 hover:underline">
+          <Link to="/login" className="font-medium text-voetur-600 hover:text-voetur-700 hover:underline">
             Fazer login
           </Link>
         </p>

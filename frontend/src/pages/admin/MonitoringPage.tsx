@@ -65,7 +65,7 @@ export default function MonitoringPage() {
         </div>
         <button
           onClick={openCreate}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+          className="rounded-lg bg-voetur-600 px-4 py-2 text-sm font-medium text-white hover:bg-voetur-700 transition-colors"
         >
           + Adicionar sistema
         </button>
@@ -93,7 +93,7 @@ export default function MonitoringPage() {
       {data && data.systems.length === 0 && (
         <div className="mt-10 text-center text-sm text-gray-400">
           Nenhum sistema cadastrado.{" "}
-          <button onClick={openCreate} className="text-blue-600 hover:underline">
+          <button onClick={openCreate} className="text-voetur-600 hover:underline">
             Adicionar o primeiro
           </button>
         </div>

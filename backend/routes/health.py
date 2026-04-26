@@ -1,9 +1,12 @@
+import logging
+
 import httpx
 from fastapi import APIRouter
 
 from db import get_settings
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/health")
@@ -19,5 +22,6 @@ async def health() -> dict[str, str]:
             if r.status_code >= 500:
                 db_status = "degraded"
     except Exception:
+        logger.warning("DB health check falhou", exc_info=True)
         db_status = "unreachable"
     return {"api": "ok", "db": db_status}

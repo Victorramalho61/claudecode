@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { apiFetch, ApiError } from "../lib/api";
+import { useToast } from "../hooks/useToast";
 
 type ChannelConfig = {
   enabled: boolean;
@@ -49,22 +50,13 @@ export default function MoneypennyPage() {
   const { token } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  const { toast, showToast } = useToast(5000);
   const [account, setAccount] = useState<Account | null>(null);
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const showToast = (msg: string) => {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast(msg);
-    toastTimer.current = setTimeout(() => setToast(null), 5000);
-  };
-
-  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -212,7 +204,7 @@ export default function MoneypennyPage() {
             <p className="text-sm text-gray-500 mb-3">Conecte sua conta para buscar e-mails e agenda.</p>
             <button
               onClick={handleConnect}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center gap-2 rounded-lg bg-voetur-600 px-4 py-2 text-sm font-medium text-white hover:bg-voetur-700 transition-colors"
             >
               <svg className="h-4 w-4" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M1 1h10v10H1V1zm11 0h10v10H12V1zM1 12h10v10H1V12zm11 0h10v10H12V12z" fill="currentColor"/>
@@ -253,7 +245,7 @@ export default function MoneypennyPage() {
                   type="url"
                   value={prefs.teams_webhook_url}
                   onChange={(e) => setPrefs((p) => ({ ...p, teams_webhook_url: e.target.value }))}
-                  className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-voetur-500 focus:outline-none focus:ring-1 focus:ring-voetur-500"
                   placeholder="https://..."
                 />
               </div>
@@ -302,7 +294,7 @@ export default function MoneypennyPage() {
             onClick={handleToggleActive}
             disabled={toggling}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
-              prefs.active ? "bg-blue-600" : "bg-gray-300"
+              prefs.active ? "bg-voetur-600" : "bg-gray-300"
             }`}
           >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
@@ -318,7 +310,7 @@ export default function MoneypennyPage() {
               <select
                 value={prefs.send_hour_utc}
                 onChange={(e) => setPrefs((p) => ({ ...p, send_hour_utc: Number(e.target.value) }))}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-voetur-500 focus:outline-none focus:ring-1 focus:ring-voetur-500"
               >
                 {Array.from({ length: 24 }, (_, i) => i).map((utcH) => {
                   const brt = ((utcH - 3 + 24) % 24).toString().padStart(2, "0");
@@ -335,7 +327,7 @@ export default function MoneypennyPage() {
         <button
           onClick={handleSavePrefs}
           disabled={saving}
-          className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="rounded-lg bg-voetur-600 px-5 py-2 text-sm font-semibold text-white hover:bg-voetur-700 disabled:opacity-50 transition-colors"
         >
           {saving ? "Salvando..." : "Salvar"}
         </button>
@@ -375,7 +367,7 @@ function ChannelCard({
   return (
     <div
       className={`rounded-xl border-2 bg-white p-4 transition-colors ${
-        enabled ? "border-blue-500" : "border-gray-200"
+        enabled ? "border-voetur-500" : "border-gray-200"
       }`}
     >
       <div className="flex items-center justify-between">
@@ -398,7 +390,7 @@ function ChannelCard({
         <button
           onClick={onToggle}
           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${
-            enabled ? "bg-blue-600" : "bg-gray-300"
+            enabled ? "bg-voetur-600" : "bg-gray-300"
           }`}
         >
           <span
