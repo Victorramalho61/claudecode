@@ -15,7 +15,7 @@ services:
       timeout: 5s
       retries: 10
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_HOST: /var/run/postgresql
       POSTGRES_PORT: 5432
@@ -85,11 +85,11 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_NAME: postgres
       DB_AFTER_CONNECT_QUERY: SET search_path TO _realtime
-      DB_ENC_KEY: supabaserealtime
+      DB_ENC_KEY: ${REALTIME_DB_ENC_KEY}
       API_JWT_SECRET: ${SUPABASE_JWT_SECRET}
       FLY_ALLOC_ID: fly123
       FLY_APP_NAME: realtime
-      SECRET_KEY_BASE: UpNVntn3cDxHJpq99YMc1T1AQgQpc8kfYTuRgBiYa15BLrx8etQoXz3gZv1u2oq
+      SECRET_KEY_BASE: ${REALTIME_SECRET_KEY_BASE}
       ERL_AFLAGS: -proto_dist inet_tcp
       ENABLE_TAILSCALE: "false"
       DNS_NODES: "''"
@@ -174,7 +174,7 @@ services:
     image: supabase/studio:latest
     restart: unless-stopped
     ports:
-      - "54323:3000"
+      - "127.0.0.1:54323:3000"
     depends_on:
       - kong
       - meta
@@ -221,6 +221,8 @@ services:
       WHATSAPP_API_URL: ${WHATSAPP_API_URL}
       WHATSAPP_API_KEY: ${WHATSAPP_API_KEY:-}
       WHATSAPP_INSTANCE: ${WHATSAPP_INSTANCE:-}
+      MONITOR_AGENT_URL: http://monitor-agent:9100
+      MONITOR_AGENT_TOKENS: ${MONITOR_AGENT_TOKENS:-}
     networks:
       - app_net
 
@@ -234,6 +236,15 @@ services:
       - "3000:80"
     depends_on:
       - backend
+    networks:
+      - app_net
+
+  monitor-agent:
+    build:
+      context: ./monitor-agent
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9100:9100"
     networks:
       - app_net
 

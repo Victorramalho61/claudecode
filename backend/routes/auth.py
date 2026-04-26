@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from auth import create_access_token, get_current_user
 from db import get_supabase
 from limiter import limiter
+from services.app_logger import log_event
 
 router = APIRouter(prefix="/auth")
 logger = logging.getLogger(__name__)
@@ -63,9 +64,11 @@ async def login(request: Request, body: LoginRequest) -> LoginResponse:
     profile = _lookup_profile(identifier)
 
     if not profile or not profile.get("password_hash"):
+        log_event("warning", "auth", f"Falha de login: {identifier}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciais inválidas")
 
     if not _verify_password(body.password, profile["password_hash"]):
+        log_event("warning", "auth", f"Falha de login: {identifier}", user_id=profile["id"])
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciais inválidas")
 
     if not profile["active"]:
@@ -82,11 +85,13 @@ async def login(request: Request, body: LoginRequest) -> LoginResponse:
         "role": profile["role"],
         "active": profile["active"],
     }
+    log_event("info", "auth", f"Login: {profile['username']}", user_id=profile["id"])
     return LoginResponse(access_token=create_access_token(payload), user=UserInfo(**payload))
 
 
 @router.post("/request-access")
-async def request_access(body: AccessRequest) -> dict:
+@limiter.limit("5/minute")
+async def request_access(request: Request, body: AccessRequest) -> dict:
     email = body.username.strip().lower()
 
     if "@" not in email:
@@ -102,10 +107,10 @@ async def request_access(body: AccessRequest) -> dict:
             detail="Domínio não autorizado. Use @voetur.com.br ou @vtclog.com.br.",
         )
 
-    if not body.password or len(body.password) < 6:
+    if not body.password or len(body.password) < 8:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Senha deve ter no mínimo 6 caracteres.",
+            detail="Senha deve ter no mínimo 8 caracteres.",
         )
 
     db = get_supabase()
@@ -158,10 +163,10 @@ async def initialize_password(body: LoginRequest) -> dict:
     if not profile["active"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Conta inativa.")
 
-    if not body.password or len(body.password) < 6:
+    if not body.password or len(body.password) < 8:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Senha deve ter no mínimo 6 caracteres.",
+            detail="Senha deve ter no mínimo 8 caracteres.",
         )
 
     db.table("profiles").update({"password_hash": _hash_password(body.password)}).eq("id", profile["id"]).execute()

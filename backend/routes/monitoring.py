@@ -2,11 +2,12 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from auth import get_current_user, require_role
 from db import get_settings, get_supabase
+from limiter import limiter
 from services.app_logger import log_event
 from services.monitor import run_check
 
@@ -196,7 +197,8 @@ async def manual_check(
 
 
 @router.post("/agent/push")
-async def agent_push(body: dict):
+@limiter.limit("60/minute")
+async def agent_push(request: Request, body: dict):
     s = get_settings()
     allowed = [t.strip() for t in s.monitor_agent_tokens.split(",") if t.strip()]
     token = body.get("agent_token", "")

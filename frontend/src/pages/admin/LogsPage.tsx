@@ -38,8 +38,8 @@ export default function LogsPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiFetch<LogEntry[]>("/api/admin/logs", { token });
-      setLogs(data);
+      const res = await apiFetch<{ data: LogEntry[]; total: number }>("/api/admin/logs?limit=300&offset=0", { token });
+      setLogs(res.data);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Erro ao carregar logs.");
     } finally {
