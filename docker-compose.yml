@@ -244,7 +244,11 @@ services:
 
 volumes:
   db_data:
+    external: true
+    name: claudecode_db_data
   storage_data:
+    external: true
+    name: claudecode_storage_data
 
 networks:
   app_net:
