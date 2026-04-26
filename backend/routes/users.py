@@ -102,3 +102,23 @@ async def update_active(
 
     logger.info("Usuário %s %s por %s", username, "ativado" if body.active else "desativado", current_user["username"])
     return result.data[0]
+
+
+@router.delete("/{username}")
+async def delete_user(
+    username: str,
+    current_user: Annotated[dict, Depends(require_role("admin"))],
+) -> dict:
+    if username == current_user["username"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Não é possível excluir seu próprio usuário")
+
+    db = get_supabase()
+    result = db.table("profiles").select("active").eq("username", username).execute()
+    if not result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuário não encontrado")
+    if result.data[0]["active"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Só é possível recusar solicitações pendentes")
+
+    db.table("profiles").delete().eq("username", username).execute()
+    logger.info("Solicitação de %s recusada e removida por %s", username, current_user["username"])
+    return {"ok": True}

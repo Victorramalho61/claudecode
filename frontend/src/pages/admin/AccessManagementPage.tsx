@@ -156,6 +156,20 @@ export default function AccessManagementPage() {
     }
   }
 
+  async function handleDeleteUser(username: string) {
+    if (!confirm(`Recusar e remover a solicitação de "${username}"?`)) return;
+    setBusy(username);
+    setError(null);
+    try {
+      await apiFetch(`/api/users/${username}`, { method: "DELETE", token });
+      await fetchProfiles();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Erro ao recusar solicitação.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function handleToggleActive(username: string, active: boolean) {
     setBusy(username);
     setError(null);
@@ -203,13 +217,22 @@ export default function AccessManagementPage() {
                   <p className="text-sm font-medium text-gray-900">{p.display_name}</p>
                   <p className="text-xs text-gray-500">{p.email}</p>
                 </div>
-                <button
-                  disabled={busy === p.username}
-                  onClick={() => handleToggleActive(p.username, true)}
-                  className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
-                >
-                  {busy === p.username ? "..." : "Aprovar"}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    disabled={busy === p.username}
+                    onClick={() => handleToggleActive(p.username, true)}
+                    className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+                  >
+                    {busy === p.username ? "..." : "Aprovar"}
+                  </button>
+                  <button
+                    disabled={busy === p.username}
+                    onClick={() => handleDeleteUser(p.username)}
+                    className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                  >
+                    Recusar
+                  </button>
+                </div>
               </div>
             ))}
           </div>
