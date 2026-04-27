@@ -110,18 +110,19 @@ class GraphClient:
         return [e for e in emails if not self._is_automated(e)]
 
     def get_today_events(self) -> list[dict]:
-        from datetime import datetime, timezone
-
-        now = datetime.now(timezone.utc)
-        start = now.strftime("%Y-%m-%dT00:00:00Z")
-        end = now.strftime("%Y-%m-%dT23:59:59Z")
+        BRT = timezone(timedelta(hours=-3))
+        now_local = datetime.now(BRT)
+        day_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = now_local.replace(hour=23, minute=59, second=59, microsecond=0)
+        start = day_start.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        end = day_end.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
         data = self._get(
             "/me/calendarView",
             params={
                 "startDateTime": start,
                 "endDateTime": end,
-                "$select": "subject,start,end,location,isAllDay",
+                "$select": "subject,start,end,location,isAllDay,organizer",
                 "$orderby": "start/dateTime",
                 "$top": "20",
             },

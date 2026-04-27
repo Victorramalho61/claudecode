@@ -6,6 +6,23 @@ import httpx
 from db import get_settings, get_supabase
 from services.microsoft_graph import GraphClient, get_access_token
 
+_BRT = timezone(timedelta(hours=-3))
+
+_DAYS_PT = {
+    "Monday": "Segunda-feira", "Tuesday": "Terça-feira", "Wednesday": "Quarta-feira",
+    "Thursday": "Quinta-feira", "Friday": "Sexta-feira", "Saturday": "Sábado", "Sunday": "Domingo",
+}
+
+_MOTIVATIONAL = {
+    "Monday":    "Semana nova, energia nova. Vai com tudo! 🚀",
+    "Tuesday":   "Foco total — o trabalho de hoje constrói o amanhã. 💡",
+    "Wednesday": "Meio da semana, ritmo de chegada. Não para agora! ⚡",
+    "Thursday":  "Reta final da semana. Cada hora conta. 🎯",
+    "Friday":    "Sexta-feira! Feche tudo com chave de ouro. 🏆",
+    "Saturday":  "Fim de semana com propósito é tempo bem gasto. 🌟",
+    "Sunday":    "Descanse, recarregue e prepare-se para o que vem. 🌿",
+}
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,7 +35,7 @@ def _format_time(iso: str) -> str:
 
 
 def _build_html(display_name: str, emails: list[dict], events: list[dict]) -> str:
-    today = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+    today = datetime.now(_BRT).strftime("%d/%m/%Y")
 
     email_rows = ""
     if emails:
@@ -74,9 +91,14 @@ def _build_html(display_name: str, emails: list[dict], events: list[dict]) -> st
 
 
 def _build_calendar_text(display_name: str, events: list[dict]) -> str:
-    today = datetime.now(timezone.utc).strftime("%d/%m/%Y")
-    lines = [f"☀️ Bom dia, {display_name}! Sua agenda — {today}", ""]
-    lines.append("📅 *Compromissos de hoje*")
+    now_local = datetime.now(_BRT)
+    today = now_local.strftime("%d/%m/%Y")
+    eng_day = now_local.strftime("%A")
+    weekday = _DAYS_PT.get(eng_day, eng_day)
+    phrase = _MOTIVATIONAL.get(eng_day, "Tenha um ótimo dia! 💼")
+
+    lines = [f"☀️ *Bom dia, {display_name}!*", f"{weekday}, {today}", ""]
+    lines.append("📅 *Agenda de hoje*")
     if events:
         for e in events:
             if e.get("isAllDay"):
@@ -86,16 +108,26 @@ def _build_calendar_text(display_name: str, events: list[dict]) -> str:
                 end = _format_time(e.get("end", {}).get("dateTime", ""))
                 time_str = f"{start} – {end}"
             subject = e.get("subject", "(sem título)")
+            location = (e.get("location") or {}).get("displayName") or ""
+            organizer = (e.get("organizer") or {}).get("emailAddress", {}).get("name") or ""
             lines.append(f"• {time_str} — {subject}")
+            meta: list[str] = []
+            if organizer:
+                meta.append(f"👤 {organizer}")
+            if location:
+                meta.append(f"📍 {location}")
+            if meta:
+                lines.append(f"  _{'  ·  '.join(meta)}_")
     else:
-        lines.append("Sem compromissos hoje.")
+        lines.append("Sem compromissos hoje. Aproveite o dia! 🌿")
     lines.append("")
-    lines.append("_Moneypenny_")
+    lines.append(phrase)
+    lines.append("_by Voetur Jarvis_")
     return "\n".join(lines)
 
 
 def _build_text(display_name: str, emails: list[dict], events: list[dict]) -> str:
-    today = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+    today = datetime.now(_BRT).strftime("%d/%m/%Y")
     lines = [f"☀️ Bom dia, {display_name}! Resumo Moneypenny — {today}", ""]
 
     lines.append("📬 *E-mails não lidos (ontem)*")
@@ -128,7 +160,7 @@ def _build_text(display_name: str, emails: list[dict], events: list[dict]) -> st
 
 
 def _build_teams_payload(display_name: str, emails: list[dict], events: list[dict]) -> dict:
-    today = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+    today = datetime.now(_BRT).strftime("%d/%m/%Y")
 
     email_blocks: list[dict] = []
     for m in (emails or [])[:15]:
@@ -284,7 +316,7 @@ async def run_daily_summaries() -> None:
                     html = _build_html(profile["display_name"], emails_out, events_out)
                     graph.send_mail(
                         to_address=account["email"],
-                        subject=f"☀️ Resumo do dia — {datetime.now(timezone.utc).strftime('%d/%m/%Y')}",
+                        subject=f"☀️ Resumo do dia — {datetime.now(_BRT).strftime('%d/%m/%Y')}",
                         html_body=html,
                     )
 
