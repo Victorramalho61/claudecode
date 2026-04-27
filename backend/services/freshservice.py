@@ -38,11 +38,12 @@ class FreshserviceClient:
                     r.raise_for_status()
                     time.sleep(RATE_LIMIT_DELAY)
                     return r.json()
-            except httpx.HTTPStatusError:
-                if attempt < MAX_RETRIES - 1:
-                    time.sleep(2 ** attempt)
-                    continue
-                raise
+            except httpx.HTTPStatusError as exc:
+                # don't retry client errors (4xx)
+                if exc.response.status_code < 500 or attempt >= MAX_RETRIES - 1:
+                    raise
+                time.sleep(2 ** attempt)
+                continue
             except httpx.RequestError:
                 if attempt < MAX_RETRIES - 1:
                     time.sleep(2 ** attempt)
@@ -140,7 +141,13 @@ def _sync_csat_page(
     page: int,
     updated_since: str | None = None,
 ) -> int:
-    ratings = client.list_satisfaction_ratings(page=page, updated_since=updated_since)
+    try:
+        ratings = client.list_satisfaction_ratings(page=page, updated_since=updated_since)
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            logger.info("CSAT endpoint unavailable (404) — skipping")
+            return 0
+        raise
     if not ratings:
         return 0
 
