@@ -44,9 +44,9 @@ function AgentForm({ initial, onClose, onSaved, token }: AgentFormProps) {
         enabled,
       };
       if (initial) {
-        await apiFetch(`/api/agents/${initial.id}`, { method: "PATCH", token, body: payload });
+        await apiFetch(`/api/agents/${initial.id}`, { method: "PATCH", token, json: payload });
       } else {
-        await apiFetch("/api/agents", { method: "POST", token, body: payload });
+        await apiFetch("/api/agents", { method: "POST", token, json: payload });
       }
       onSaved();
     } catch (e) {
