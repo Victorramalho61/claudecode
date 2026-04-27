@@ -62,12 +62,12 @@ def _build_html(display_name: str, emails: list[dict], events: list[dict]) -> st
         for e in events:
             if e.get("isAllDay"):
                 time_str = "Dia todo"
-                time_color = "#7c3aed"
+                time_color = "#0D3664"
             else:
                 t_s = _format_time(e.get("start", {}).get("dateTime", ""))
                 t_e = _format_time(e.get("end", {}).get("dateTime", ""))
                 time_str = f"{t_s} – {t_e}"
-                time_color = "#1d4ed8"
+                time_color = "#00694E"
 
             subject   = _esc(e.get("subject") or "(sem título)")
             location  = _esc((e.get("location") or {}).get("displayName") or "")
@@ -78,11 +78,11 @@ def _build_html(display_name: str, emails: list[dict], events: list[dict]) -> st
 
             response = (e.get("responseStatus") or {}).get("response", "")
             if response == "accepted":
-                badge = '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">✓ Confirmado</span>'
+                badge = '<span style="background:#e0f0eb;color:#00694E;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">✓ Confirmado</span>'
             elif response == "tentativelyAccepted":
-                badge = '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">⏳ Talvez</span>'
+                badge = '<span style="background:#fdf3e0;color:#DC9001;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">⏳ Talvez</span>'
             elif response == "notResponded":
-                badge = '<span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">Pendente</span>'
+                badge = '<span style="background:#EFEEF5;color:#6b7280;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">Pendente</span>'
             else:
                 badge = ""
 
@@ -93,7 +93,7 @@ def _build_html(display_name: str, emails: list[dict], events: list[dict]) -> st
                 meta_parts.append(f"📍 {location}")
             if is_online:
                 if meeting_url:
-                    meta_parts.append(f'<a href="{_esc(meeting_url)}" style="color:#1d4ed8;text-decoration:none;font-weight:600">🖥 Entrar na reunião</a>')
+                    meta_parts.append(f'<a href="{_esc(meeting_url)}" style="color:#00694E;text-decoration:none;font-weight:600">🖥 Entrar na reunião</a>')
                 else:
                     meta_parts.append("🖥 Online")
 
@@ -118,7 +118,7 @@ def _build_html(display_name: str, emails: list[dict], events: list[dict]) -> st
               {badge_html}
             </td>
             <td valign="top" style="padding-bottom:16px;border-bottom:1px solid #f3f4f6">
-              <div style="font-weight:600;font-size:15px;color:#111827">{subject}</div>
+              <div style="font-weight:600;font-size:15px;color:#131516">{subject}</div>
               {meta_html}
               {preview_html}
             </td>
@@ -139,9 +139,9 @@ def _build_html(display_name: str, emails: list[dict], events: list[dict]) -> st
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
             <td style="padding:9px 0;border-bottom:1px solid #f9fafb">
-              <div style="font-weight:600;font-size:14px;color:#111827">{sender_name}</div>
+              <div style="font-weight:600;font-size:14px;color:#131516">{sender_name}</div>
               <div style="font-size:11px;color:#9ca3af;margin-top:1px">{sender_addr}</div>
-              <div style="font-size:13px;color:#374151;margin-top:3px">{subject}</div>
+              <div style="font-size:13px;color:#131516;margin-top:3px">{subject}</div>
             </td>
           </tr>
         </table>"""
@@ -158,40 +158,40 @@ def _build_html(display_name: str, emails: list[dict], events: list[dict]) -> st
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Resumo do dia — {today}</title>
 </head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6">
+<body style="margin:0;padding:0;background:#EFEEF5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#EFEEF5">
     <tr><td style="padding:32px 16px" align="center">
 
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(13,54,100,0.12)">
 
         <!-- Header -->
         <tr>
-          <td style="background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 60%,#3b82f6 100%);padding:32px 32px 28px">
-            <div style="color:#93c5fd;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">Moneypenny · Jarvis</div>
+          <td style="background:linear-gradient(135deg,#0D3664 0%,#00694E 100%);padding:32px 32px 28px">
+            <div style="color:#a8d5c5;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">Moneypenny · Jarvis</div>
             <div style="color:#ffffff;font-size:27px;font-weight:700;line-height:1.2">☀️ Bom dia, {_esc(display_name)}!</div>
-            <div style="color:#bfdbfe;font-size:15px;margin-top:8px">{weekday}, {today}</div>
+            <div style="color:#a8d5c5;font-size:15px;margin-top:8px">{weekday}, {today}</div>
           </td>
         </tr>
 
         <!-- Frase motivacional -->
         <tr>
-          <td style="background:#eff6ff;padding:14px 32px;border-bottom:1px solid #dbeafe">
-            <div style="color:#1e40af;font-size:14px;font-style:italic">{phrase}</div>
+          <td style="background:#e0f0eb;padding:14px 32px;border-bottom:2px solid #00694E">
+            <div style="color:#00694E;font-size:14px;font-style:italic">{phrase}</div>
           </td>
         </tr>
 
         <!-- Stats -->
         <tr>
-          <td style="padding:20px 32px;border-bottom:2px solid #f3f4f6">
+          <td style="padding:20px 32px;border-bottom:2px solid #EFEEF5">
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td style="text-align:center;padding:8px 0">
-                  <div style="font-size:28px;font-weight:700;color:#1d4ed8">{event_count}</div>
+                  <div style="font-size:28px;font-weight:700;color:#00694E">{event_count}</div>
                   <div style="font-size:11px;color:#6b7280;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;margin-top:2px">Compromisso{"s" if event_count != 1 else ""}</div>
                 </td>
-                <td width="1" style="background:#e5e7eb"></td>
+                <td width="1" style="background:#EFEEF5"></td>
                 <td style="text-align:center;padding:8px 0">
-                  <div style="font-size:28px;font-weight:700;color:#6b7280">{email_count}</div>
+                  <div style="font-size:28px;font-weight:700;color:#0D3664">{email_count}</div>
                   <div style="font-size:11px;color:#6b7280;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;margin-top:2px">E-mail{"s" if email_count != 1 else ""} não lido{"s" if email_count != 1 else ""}</div>
                 </td>
               </tr>
@@ -202,7 +202,7 @@ def _build_html(display_name: str, emails: list[dict], events: list[dict]) -> st
         <!-- Agenda -->
         <tr>
           <td style="padding:28px 32px 12px">
-            <div style="font-size:11px;font-weight:700;color:#374151;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #f3f4f6">📅 Agenda de hoje</div>
+            <div style="font-size:11px;font-weight:700;color:#0D3664;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #00694E">📅 Agenda de hoje</div>
             {events_html}
           </td>
         </tr>
@@ -210,16 +210,16 @@ def _build_html(display_name: str, emails: list[dict], events: list[dict]) -> st
         <!-- E-mails -->
         <tr>
           <td style="padding:12px 32px 12px">
-            <div style="font-size:11px;font-weight:700;color:#374151;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #f3f4f6">📬 E-mails não lidos (ontem)</div>
+            <div style="font-size:11px;font-weight:700;color:#0D3664;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #00694E">📬 E-mails não lidos (ontem)</div>
             {emails_html}
           </td>
         </tr>
 
         <!-- Footer -->
         <tr>
-          <td style="padding:20px 32px;background:#f9fafb;border-top:1px solid #f3f4f6">
-            <div style="font-size:12px;color:#9ca3af;text-align:center">
-              Enviado automaticamente &nbsp;·&nbsp; <strong style="color:#6b7280">Moneypenny by Voetur Jarvis</strong>
+          <td style="padding:20px 32px;background:#0D3664;border-top:3px solid #DC9001">
+            <div style="font-size:12px;color:#a8d5c5;text-align:center">
+              Enviado automaticamente &nbsp;·&nbsp; <strong style="color:#ffffff">Moneypenny by Voetur Jarvis</strong>
             </div>
           </td>
         </tr>
