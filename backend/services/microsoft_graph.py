@@ -122,7 +122,7 @@ class GraphClient:
             params={
                 "startDateTime": start,
                 "endDateTime": end,
-                "$select": "subject,start,end,location,isAllDay,organizer",
+                "$select": "subject,start,end,location,isAllDay,organizer,responseStatus,isOnlineMeeting,onlineMeetingUrl,bodyPreview",
                 "$orderby": "start/dateTime",
                 "$top": "20",
             },

@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timedelta, timezone
+from html import escape as _esc
 
 import httpx
 
@@ -34,58 +35,198 @@ def _format_time(iso: str) -> str:
         return iso
 
 
+def _clean_preview(text: str) -> str:
+    """Retorna a primeira linha útil do bodyPreview, sem lixo de separadores."""
+    if not text:
+        return ""
+    for line in text.replace("\r\n", "\n").split("\n"):
+        line = line.strip()
+        if len(line) > 15 and not all(c in "-_=* \t" for c in line):
+            return (_esc(line[:130]) + "…") if len(line) > 130 else _esc(line)
+    return ""
+
+
 def _build_html(display_name: str, emails: list[dict], events: list[dict]) -> str:
-    today = datetime.now(_BRT).strftime("%d/%m/%Y")
+    now_local = datetime.now(_BRT)
+    today = now_local.strftime("%d/%m/%Y")
+    eng_day = now_local.strftime("%A")
+    weekday = _DAYS_PT.get(eng_day, eng_day)
+    phrase = _MOTIVATIONAL.get(eng_day, "Tenha um ótimo dia!")
 
-    email_rows = ""
-    if emails:
-        for m in emails:
-            sender = m.get("from", {}).get("emailAddress", {}).get("address", "?")
-            subject = m.get("subject", "(sem assunto)")
-            email_rows += f"<tr><td style='padding:4px 8px'>{sender}</td><td style='padding:4px 8px'>{subject}</td></tr>"
-    else:
-        email_rows = "<tr><td colspan='2' style='padding:8px;color:#6b7280'>Nenhum e-mail não lido de ontem.</td></tr>"
+    event_count = len(events)
+    email_count = len(emails)
 
-    event_rows = ""
+    # --- Eventos ---
+    events_html = ""
     if events:
         for e in events:
             if e.get("isAllDay"):
                 time_str = "Dia todo"
+                time_color = "#7c3aed"
             else:
-                start = _format_time(e.get("start", {}).get("dateTime", ""))
-                end = _format_time(e.get("end", {}).get("dateTime", ""))
-                time_str = f"{start} – {end}"
-            subject = e.get("subject", "(sem título)")
-            location = e.get("location", {}).get("displayName", "") or ""
-            event_rows += f"<tr><td style='padding:4px 8px'>{time_str}</td><td style='padding:4px 8px'>{subject}</td><td style='padding:4px 8px;color:#6b7280'>{location}</td></tr>"
+                t_s = _format_time(e.get("start", {}).get("dateTime", ""))
+                t_e = _format_time(e.get("end", {}).get("dateTime", ""))
+                time_str = f"{t_s} – {t_e}"
+                time_color = "#1d4ed8"
+
+            subject   = _esc(e.get("subject") or "(sem título)")
+            location  = _esc((e.get("location") or {}).get("displayName") or "")
+            organizer = _esc((e.get("organizer") or {}).get("emailAddress", {}).get("name") or "")
+            is_online = e.get("isOnlineMeeting", False)
+            meeting_url = e.get("onlineMeetingUrl") or ""
+            preview   = _clean_preview(e.get("bodyPreview") or "")
+
+            response = (e.get("responseStatus") or {}).get("response", "")
+            if response == "accepted":
+                badge = '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">✓ Confirmado</span>'
+            elif response == "tentativelyAccepted":
+                badge = '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">⏳ Talvez</span>'
+            elif response == "notResponded":
+                badge = '<span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">Pendente</span>'
+            else:
+                badge = ""
+
+            meta_parts = []
+            if organizer:
+                meta_parts.append(f"👤 {organizer}")
+            if location:
+                meta_parts.append(f"📍 {location}")
+            if is_online:
+                if meeting_url:
+                    meta_parts.append(f'<a href="{_esc(meeting_url)}" style="color:#1d4ed8;text-decoration:none;font-weight:600">🖥 Entrar na reunião</a>')
+                else:
+                    meta_parts.append("🖥 Online")
+
+            meta_html = (
+                f'<div style="font-size:13px;color:#6b7280;margin-top:5px">'
+                f'{"&nbsp; · &nbsp;".join(meta_parts)}</div>'
+            ) if meta_parts else ""
+
+            badge_html = (
+                f'<div style="margin-top:6px">{badge}</div>'
+            ) if badge else ""
+
+            preview_html = (
+                f'<div style="font-size:12px;color:#9ca3af;margin-top:6px;font-style:italic">{preview}</div>'
+            ) if preview else ""
+
+            events_html += f"""
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:4px">
+          <tr>
+            <td width="110" valign="top" style="padding:0 16px 16px 0">
+              <div style="font-weight:700;font-size:13px;color:{time_color};white-space:nowrap">{time_str}</div>
+              {badge_html}
+            </td>
+            <td valign="top" style="padding-bottom:16px;border-bottom:1px solid #f3f4f6">
+              <div style="font-weight:600;font-size:15px;color:#111827">{subject}</div>
+              {meta_html}
+              {preview_html}
+            </td>
+          </tr>
+        </table>"""
     else:
-        event_rows = "<tr><td colspan='3' style='padding:8px;color:#6b7280'>Sem compromissos hoje.</td></tr>"
+        events_html = '<p style="color:#9ca3af;font-size:14px;text-align:center;padding:16px 0;margin:0">Nenhum compromisso agendado para hoje.</p>'
+
+    # --- E-mails ---
+    emails_html = ""
+    if emails:
+        for m in emails[:15]:
+            from_obj    = (m.get("from") or {}).get("emailAddress") or {}
+            sender_name = _esc(from_obj.get("name") or from_obj.get("address", "?"))
+            sender_addr = _esc(from_obj.get("address", ""))
+            subject     = _esc(m.get("subject") or "(sem assunto)")
+            emails_html += f"""
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:9px 0;border-bottom:1px solid #f9fafb">
+              <div style="font-weight:600;font-size:14px;color:#111827">{sender_name}</div>
+              <div style="font-size:11px;color:#9ca3af;margin-top:1px">{sender_addr}</div>
+              <div style="font-size:13px;color:#374151;margin-top:3px">{subject}</div>
+            </td>
+          </tr>
+        </table>"""
+        if len(emails) > 15:
+            extra = len(emails) - 15
+            emails_html += f'<p style="font-size:13px;color:#6b7280;margin:8px 0 0">…e mais {extra} e-mail{"s" if extra > 1 else ""}</p>'
+    else:
+        emails_html = '<p style="color:#9ca3af;font-size:14px;text-align:center;padding:16px 0;margin:0">Nenhum e-mail não lido de ontem.</p>'
 
     return f"""<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#111827">
-  <h2 style="color:#1d4ed8">Bom dia, {display_name}! ☀️</h2>
-  <p style="color:#6b7280">Resumo Moneypenny — {today}</p>
-  <h3 style="margin-top:24px">📬 E-mails não lidos (ontem)</h3>
-  <table style="width:100%;border-collapse:collapse;font-size:14px">
-    <thead><tr style="background:#f3f4f6">
-      <th style="padding:6px 8px;text-align:left">Remetente</th>
-      <th style="padding:6px 8px;text-align:left">Assunto</th>
-    </tr></thead>
-    <tbody>{email_rows}</tbody>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Resumo do dia — {today}</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6">
+    <tr><td style="padding:32px 16px" align="center">
+
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 60%,#3b82f6 100%);padding:32px 32px 28px">
+            <div style="color:#93c5fd;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">Moneypenny · Jarvis</div>
+            <div style="color:#ffffff;font-size:27px;font-weight:700;line-height:1.2">☀️ Bom dia, {_esc(display_name)}!</div>
+            <div style="color:#bfdbfe;font-size:15px;margin-top:8px">{weekday}, {today}</div>
+          </td>
+        </tr>
+
+        <!-- Frase motivacional -->
+        <tr>
+          <td style="background:#eff6ff;padding:14px 32px;border-bottom:1px solid #dbeafe">
+            <div style="color:#1e40af;font-size:14px;font-style:italic">{phrase}</div>
+          </td>
+        </tr>
+
+        <!-- Stats -->
+        <tr>
+          <td style="padding:20px 32px;border-bottom:2px solid #f3f4f6">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="text-align:center;padding:8px 0">
+                  <div style="font-size:28px;font-weight:700;color:#1d4ed8">{event_count}</div>
+                  <div style="font-size:11px;color:#6b7280;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;margin-top:2px">Compromisso{"s" if event_count != 1 else ""}</div>
+                </td>
+                <td width="1" style="background:#e5e7eb"></td>
+                <td style="text-align:center;padding:8px 0">
+                  <div style="font-size:28px;font-weight:700;color:#6b7280">{email_count}</div>
+                  <div style="font-size:11px;color:#6b7280;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;margin-top:2px">E-mail{"s" if email_count != 1 else ""} não lido{"s" if email_count != 1 else ""}</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Agenda -->
+        <tr>
+          <td style="padding:28px 32px 12px">
+            <div style="font-size:11px;font-weight:700;color:#374151;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #f3f4f6">📅 Agenda de hoje</div>
+            {events_html}
+          </td>
+        </tr>
+
+        <!-- E-mails -->
+        <tr>
+          <td style="padding:12px 32px 12px">
+            <div style="font-size:11px;font-weight:700;color:#374151;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #f3f4f6">📬 E-mails não lidos (ontem)</div>
+            {emails_html}
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:20px 32px;background:#f9fafb;border-top:1px solid #f3f4f6">
+            <div style="font-size:12px;color:#9ca3af;text-align:center">
+              Enviado automaticamente &nbsp;·&nbsp; <strong style="color:#6b7280">Moneypenny by Voetur Jarvis</strong>
+            </div>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
   </table>
-  <h3 style="margin-top:24px">📅 Agenda de hoje</h3>
-  <table style="width:100%;border-collapse:collapse;font-size:14px">
-    <thead><tr style="background:#f3f4f6">
-      <th style="padding:6px 8px;text-align:left">Horário</th>
-      <th style="padding:6px 8px;text-align:left">Compromisso</th>
-      <th style="padding:6px 8px;text-align:left">Local</th>
-    </tr></thead>
-    <tbody>{event_rows}</tbody>
-  </table>
-  <hr style="margin-top:32px;border:none;border-top:1px solid #e5e7eb">
-  <p style="font-size:12px;color:#9ca3af">Moneypenny — enviado automaticamente</p>
 </body>
 </html>"""
 
