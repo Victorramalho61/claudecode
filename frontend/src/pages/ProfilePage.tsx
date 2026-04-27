@@ -45,8 +45,15 @@ export default function ProfilePage() {
       .finally(() => setLoading(false));
   }, [selectedUsername, isAdmin, token]);
 
+  const phoneError =
+    profile.whatsapp_phone &&
+    (profile.whatsapp_phone.length < 12 || profile.whatsapp_phone.length > 13)
+      ? "Número inválido — use formato: 5561999999999 (13 dígitos)"
+      : null;
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (phoneError) return;
     setSaving(true);
     try {
       if (isAdmin && selectedUsername !== user?.username) {
@@ -128,20 +135,33 @@ export default function ProfilePage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">WhatsApp</label>
-              <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Com DDD e código do país, sem espaços (ex: 5561999999999)</p>
+              <p className="mt-0.5 text-xs text-yellow-600 dark:text-yellow-400">
+                ⚠️ Use código do país + DDD + número (ex: <strong>55</strong>61999999999)
+              </p>
               <input
                 type="tel"
                 value={profile.whatsapp_phone}
-                onChange={(e) => setProfile((p) => ({ ...p, whatsapp_phone: e.target.value.replace(/\D/g, "") }))}
-                className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-voetur-500 focus:outline-none focus:ring-1 focus:ring-voetur-500"
+                onChange={(e) => {
+                  let v = e.target.value.replace(/\D/g, "");
+                  if (v.length >= 2 && !v.startsWith("55")) v = "55" + v;
+                  setProfile((p) => ({ ...p, whatsapp_phone: v }));
+                }}
+                className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-1 bg-white dark:bg-gray-800 ${
+                  phoneError
+                    ? "border-red-400 dark:border-red-500 focus:border-red-400 focus:ring-red-400"
+                    : "border-gray-300 dark:border-gray-700 focus:border-voetur-500 focus:ring-voetur-500"
+                }`}
                 placeholder="5561999999999"
               />
+              {phoneError && (
+                <p className="mt-1 text-xs text-red-500 dark:text-red-400">{phoneError}</p>
+              )}
             </div>
           </section>
 
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || !!phoneError}
             className="rounded-lg bg-voetur-600 px-5 py-2 text-sm font-semibold text-white hover:bg-voetur-700 disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-voetur-500 focus:ring-offset-2"
           >
             {saving ? "Salvando..." : "Salvar alterações"}
