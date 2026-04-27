@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 from db import get_settings, get_supabase
 from limiter import limiter
 from routes.admin import router as admin_router
+from routes.agents import router as agents_router
 from routes.auth import router as auth_router
 from routes.freshservice import router as freshservice_router
 from routes.health import router as health_router
@@ -66,3 +67,4 @@ app.include_router(moneypenny_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(monitoring_router, prefix="/api")
 app.include_router(freshservice_router, prefix="/api")
+app.include_router(agents_router, prefix="/api")

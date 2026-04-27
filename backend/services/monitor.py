@@ -11,8 +11,6 @@ from services.app_logger import log_event
 
 logger = logging.getLogger(__name__)
 
-ALERT_COOLDOWN_MINUTES = 30
-
 
 @dataclass
 class CheckResult:
@@ -185,35 +183,6 @@ _CHECKERS = {
 }
 
 
-def _should_alert_down(system: dict) -> bool:
-    last = system.get("last_alerted_at")
-    if not last:
-        return True
-    last_dt = datetime.fromisoformat(last.replace("Z", "+00:00"))
-    return (datetime.now(timezone.utc) - last_dt).total_seconds() > ALERT_COOLDOWN_MINUTES * 60
-
-
-async def _send_whatsapp_alert(text: str) -> None:
-    s = get_settings()
-    if not s.whatsapp_api_url or not s.whatsapp_instance:
-        return
-    try:
-        db = get_supabase()
-        admins = db.table("profiles").select("whatsapp_phone").eq("role", "admin").eq("active", True).execute()
-        phones = [r["whatsapp_phone"] for r in admins.data if r.get("whatsapp_phone")]
-        if not phones:
-            return
-        url = f"{s.whatsapp_api_url.rstrip('/')}/message/sendText/{s.whatsapp_instance}"
-        timeout = httpx.Timeout(connect=10.0, read=20.0, write=10.0, pool=5.0)
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            for phone in phones:
-                await client.post(url,
-                                  json={"number": phone, "text": text},
-                                  headers={"apikey": s.whatsapp_api_key})
-    except Exception as exc:
-        logger.warning("Falha ao enviar alerta WhatsApp: %s", exc)
-
-
 async def run_check(system: dict, checked_by: str = "scheduler") -> dict:
     checker = _CHECKERS.get(system.get("system_type", ""))
     if not checker:
@@ -224,7 +193,6 @@ async def run_check(system: dict, checked_by: str = "scheduler") -> dict:
 
     db = get_supabase()
 
-    # busca status do check anterior para detectar recuperação
     prev = db.table("system_checks") \
         .select("status") \
         .eq("system_id", system["id"]) \
@@ -245,24 +213,23 @@ async def run_check(system: dict, checked_by: str = "scheduler") -> dict:
     }).execute().data[0]
 
     if result.status == "down":
-        log_event("error", "monitoring", f"Sistema DOWN: {system['name']}", detail=result.detail)
-        if _should_alert_down(system):
-            now_str = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M UTC")
-            text = f"🚨 *SISTEMA DOWN*: {system['name']}\n📅 {now_str}"
-            if result.detail:
-                text += f"\n⚠️ {result.detail[:200]}"
-            await _send_whatsapp_alert(text)
-            db.table("monitored_systems").update({"last_alerted_at": now_iso}).eq("id", system["id"]).execute()
+        new_count = (system.get("consecutive_down_count") or 0) + 1
+        db.table("monitored_systems").update(
+            {"consecutive_down_count": new_count}
+        ).eq("id", system["id"]).execute()
+        if new_count >= 2:
+            log_event("error", "monitoring", f"Sistema DOWN: {system['name']}", detail=result.detail)
 
     elif result.status == "degraded":
         log_event("warning", "monitoring", f"Sistema DEGRADADO: {system['name']}", detail=result.detail)
 
-    elif result.status == "up" and prev_status == "down":
-        log_event("info", "monitoring", f"Sistema RECUPERADO: {system['name']}")
-        now_str = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M UTC")
-        text = f"✅ *SISTEMA RECUPERADO*: {system['name']}\n📅 {now_str}"
-        await _send_whatsapp_alert(text)
-        db.table("monitored_systems").update({"last_alerted_at": None}).eq("id", system["id"]).execute()
+    elif result.status == "up":
+        if prev_status == "down":
+            log_event("info", "monitoring", f"Sistema RECUPERADO: {system['name']}")
+        if (system.get("consecutive_down_count") or 0) > 0:
+            db.table("monitored_systems").update(
+                {"consecutive_down_count": 0}
+            ).eq("id", system["id"]).execute()
 
     return row
 

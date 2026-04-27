@@ -11,6 +11,7 @@ import LogsPage from "./pages/admin/LogsPage";
 import MonitoringPage from "./pages/admin/MonitoringPage";
 import SystemDetailPage from "./pages/admin/SystemDetailPage";
 import FreshservicePage from "./pages/FreshservicePage";
+import AgentsPage from "./pages/admin/AgentsPage";
 import MoneypennyPage from "./pages/MoneypennyPage";
 import ProfilePage from "./pages/ProfilePage";
 import InitializePasswordPage from "./pages/InitializePasswordPage";
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/admin/monitoramento" element={<MonitoringPage />} />
             <Route path="/admin/monitoramento/:id" element={<SystemDetailPage />} />
             <Route path="/freshservice" element={<FreshservicePage />} />
+            <Route path="/admin/agentes" element={<AgentsPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

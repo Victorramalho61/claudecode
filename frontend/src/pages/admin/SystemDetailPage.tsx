@@ -7,6 +7,10 @@ import StatusBadge, { STATUS_LABEL } from "../../components/monitoring/StatusBad
 import Sparkline from "../../components/monitoring/Sparkline";
 import SystemFormModal from "../../components/monitoring/SystemFormModal";
 
+function fmtLatency(ms: number): string {
+  return (ms / 1000).toFixed(2) + "s";
+}
+
 const LIMIT = 50;
 
 export default function SystemDetailPage() {
@@ -116,9 +120,9 @@ export default function SystemDetailPage() {
               </div>
               <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 text-center">
                 <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                  {system.last_check?.latency_ms != null ? `${system.last_check.latency_ms}ms` : "—"}
+                  {system.last_check?.latency_ms != null ? fmtLatency(system.last_check.latency_ms) : "—"}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Latência</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Latência (s)</p>
               </div>
             </div>
 
@@ -189,7 +193,7 @@ export default function SystemDetailPage() {
                   <tr>
                     <th className="px-4 py-3 text-left">Horário</th>
                     <th className="px-4 py-3 text-left">Status</th>
-                    <th className="px-4 py-3 text-left">Latência</th>
+                    <th className="px-4 py-3 text-left">Latência (s)</th>
                     <th className="px-4 py-3 text-left">Detalhe</th>
                   </tr>
                 </thead>
@@ -203,7 +207,7 @@ export default function SystemDetailPage() {
                         <StatusBadge status={chk.status} size="sm" />
                       </td>
                       <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400">
-                        {chk.latency_ms != null ? `${chk.latency_ms}ms` : "—"}
+                        {chk.latency_ms != null ? fmtLatency(chk.latency_ms) : "—"}
                       </td>
                       <td className="max-w-xs truncate px-4 py-2.5 text-xs text-gray-400 dark:text-gray-500">
                         {chk.detail ?? "—"}

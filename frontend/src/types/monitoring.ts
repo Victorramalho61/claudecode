@@ -25,6 +25,7 @@ export interface MonitoredSystem {
   created_at: string;
   last_check?: SystemCheck;
   uptime_24h?: number;
+  consecutive_down_count?: number;
 }
 
 export interface DashboardData {

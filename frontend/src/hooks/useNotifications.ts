@@ -23,7 +23,7 @@ export function useNotifications() {
       const dash = await apiFetch<DashboardData>("/api/monitoring/dashboard", { token });
       for (const sys of dash.systems) {
         const status = sys.last_check?.status;
-        if (status === "down") {
+        if (status === "down" && (sys.consecutive_down_count ?? 0) >= 2) {
           next.push({
             id: `sys-${sys.id}`,
             type: "down",

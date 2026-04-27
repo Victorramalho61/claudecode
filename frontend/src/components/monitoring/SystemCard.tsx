@@ -6,7 +6,12 @@ const TYPE_LABEL: Record<string, string> = {
   evolution: "WhatsApp",
   metrics:   "Servidor",
   custom:    "Custom",
+  tcp:       "TCP",
 };
+
+function fmtLatency(ms: number): string {
+  return (ms / 1000).toFixed(2) + "s";
+}
 
 const BORDER_STATUS: Partial<Record<SystemStatus, string>> = {
   down:     "border-red-300",
@@ -48,7 +53,7 @@ export default function SystemCard({ system, onClick }: Props) {
         </span>
         <span>
           <span className="font-medium text-gray-700 dark:text-gray-300">
-            {lc?.latency_ms != null ? `${lc.latency_ms}ms` : "—"}
+            {lc?.latency_ms != null ? fmtLatency(lc.latency_ms) : "—"}
           </span>{" "}
           latência
         </span>
