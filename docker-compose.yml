@@ -236,7 +236,8 @@ services:
         VITE_API_URL: ${VITE_API_URL}
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - "443:443"
+      - "80:80"
     depends_on:
       - backend
     networks:
@@ -252,7 +253,7 @@ services:
       - app_net
 
   evolution-api:
-    image: atendai/evolution-api:v2.2.3
+    image: atendai/evolution-api:latest
     restart: unless-stopped
     depends_on:
       db:
@@ -269,6 +270,9 @@ services:
       DATABASE_PROVIDER: "postgresql"
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/evolution
       CACHE_REDIS_ENABLED: "false"
+      CONFIG_SESSION_PHONE_CLIENT: "Evolution API"
+      CONFIG_SESSION_PHONE_NAME: "Chrome"
+      CONFIG_SESSION_PHONE_VERSION: "2.3000.1038179882"
       DEL_INSTANCE: "false"
       QRCODE_LIMIT: "30"
       QRCODE_COLOR: "#000000"

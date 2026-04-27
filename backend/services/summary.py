@@ -30,7 +30,9 @@ logger = logging.getLogger(__name__)
 def _format_time(iso: str) -> str:
     try:
         dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
-        return dt.strftime("%H:%M")
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(_BRT).strftime("%H:%M")
     except Exception:
         return iso
 
