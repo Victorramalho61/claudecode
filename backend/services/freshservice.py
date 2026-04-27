@@ -56,7 +56,6 @@ class FreshserviceClient:
             "query": f'"status:{status}"',
             "page": page,
             "per_page": PAGE_SIZE,
-            "include": "stats",
         }).get("tickets", [])
 
     def list_updated_tickets(self, updated_since: str, page: int = 1) -> list[dict]:
@@ -95,7 +94,6 @@ class FreshserviceClient:
             "order_type": "asc",
             "page": page,
             "per_page": 10,
-            "include": "stats",
         }).get("tickets", [])
 
     def get_waiting_vendor_tickets(self, page: int = 1) -> list[dict]:
