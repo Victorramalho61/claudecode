@@ -4,8 +4,8 @@ from typing import Literal
 from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel
 
+from auth import require_role
 from db import get_supabase
-from routes.auth import require_role
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
