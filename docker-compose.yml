@@ -26,7 +26,9 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
-      - app_net
+      app_net:
+        aliases:
+          - postgres
 
   auth:
     image: supabase/gotrue:v2.143.0
@@ -251,6 +253,9 @@ services:
   evolution-api:
     image: atendai/evolution-api:v2.2.3
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "8080:8080"
     volumes:
@@ -259,7 +264,10 @@ services:
       SERVER_URL: ${EVOLUTION_SERVER_URL}
       AUTHENTICATION_API_KEY: ${WHATSAPP_API_KEY}
       AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
-      DATABASE_ENABLED: "false"
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: "postgresql"
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/evolution
+      CACHE_REDIS_ENABLED: "false"
       DEL_INSTANCE: "false"
       QRCODE_LIMIT: "30"
       QRCODE_COLOR: "#000000"
