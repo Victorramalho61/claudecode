@@ -18,6 +18,7 @@ from db import get_settings, get_supabase
 from limiter import limiter
 from routes.admin import router as admin_router
 from routes.auth import router as auth_router
+from routes.freshservice import router as freshservice_router
 from routes.health import router as health_router
 from routes.moneypenny import router as moneypenny_router
 from routes.monitoring import router as monitoring_router
@@ -64,3 +65,4 @@ app.include_router(users_router, prefix="/api")
 app.include_router(moneypenny_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(monitoring_router, prefix="/api")
+app.include_router(freshservice_router, prefix="/api")

@@ -10,6 +10,7 @@ import AccessManagementPage from "./pages/admin/AccessManagementPage";
 import LogsPage from "./pages/admin/LogsPage";
 import MonitoringPage from "./pages/admin/MonitoringPage";
 import SystemDetailPage from "./pages/admin/SystemDetailPage";
+import FreshservicePage from "./pages/FreshservicePage";
 import MoneypennyPage from "./pages/MoneypennyPage";
 import ProfilePage from "./pages/ProfilePage";
 import InitializePasswordPage from "./pages/InitializePasswordPage";
@@ -38,6 +39,7 @@ export default function App() {
             <Route path="/admin/logs" element={<LogsPage />} />
             <Route path="/admin/monitoramento" element={<MonitoringPage />} />
             <Route path="/admin/monitoramento/:id" element={<SystemDetailPage />} />
+            <Route path="/freshservice" element={<FreshservicePage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

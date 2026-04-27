@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     whatsapp_instance: str = ""
     monitor_agent_url: str = "http://monitor-agent:9100"
     monitor_agent_tokens: str = ""
+    freshservice_api_key: str = ""
+    anthropic_api_key: str = ""
 
     model_config = {"env_file": ".env"}
 

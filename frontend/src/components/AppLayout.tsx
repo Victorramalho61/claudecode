@@ -18,7 +18,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: "moneypenny", label: "Moneypenny",       path: "/moneypenny",           icon: "sparkle",  roles: ["admin", "user"] },
   { id: "access",     label: "Gestão de Acesso", path: "/admin/acesso",         icon: "users",    roles: ["admin", "user"] },
   { id: "logs",       label: "Logs",             path: "/admin/logs",           icon: "file",     roles: ["admin"] },
-  { id: "monitoring", label: "Monitoramento",    path: "/admin/monitoramento",  icon: "chart",    roles: ["admin"] },
+  { id: "monitoring",    label: "Monitoramento",    path: "/admin/monitoramento",  icon: "chart",      roles: ["admin"] },
+  { id: "freshservice",  label: "Freshservice",     path: "/freshservice",         icon: "briefcase",  roles: ["admin"] },
 ];
 
 export default function AppLayout() {

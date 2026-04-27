@@ -11,6 +11,7 @@ _scheduler = AsyncIOScheduler(timezone="UTC")
 def start_scheduler() -> None:
     from services.summary import run_daily_summaries
     from services.monitor import run_all_checks
+    from services.freshservice import run_daily_sync as run_daily_freshservice_sync
 
     _scheduler.add_job(
         run_daily_summaries,
@@ -26,8 +27,16 @@ def start_scheduler() -> None:
         max_instances=1,
         misfire_grace_time=60,
     )
+    _scheduler.add_job(
+        run_daily_freshservice_sync,
+        trigger=CronTrigger(hour=9, minute=0),
+        id="daily_freshservice_sync",
+        replace_existing=True,
+        max_instances=1,
+        misfire_grace_time=300,
+    )
     _scheduler.start()
-    logger.info("Scheduler started — summaries hourly, monitoring every 5min")
+    logger.info("Scheduler started — summaries hourly, monitoring every 5min, freshservice daily at 09h UTC")
 
 
 def stop_scheduler() -> None:
