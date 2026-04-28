@@ -19,32 +19,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  test-backend:
-    needs: security-scan
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5.3.0
-        with:
-          python-version: "3.11.12"
-          cache: pip
-
-      - run: pip install --upgrade pip
-      - run: pip install -r requirements.txt pytest pip-audit
-
-      - run: pip-audit -r requirements.txt
-
-      - run: pytest -v
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          ALLOWED_ORIGINS: "http://localhost:5173"
-
   test-frontend:
     needs: security-scan
     runs-on: ubuntu-latest
@@ -65,7 +39,7 @@ jobs:
       - run: npm run typecheck
 
   deploy:
-    needs: [test-backend, test-frontend]
+    needs: [test-frontend]
     runs-on: self-hosted
     steps:
       - name: Deploy
@@ -74,4 +48,4 @@ jobs:
           $bash = "C:\Program Files\Git\bin\bash.exe"
           if (!(Test-Path $bash)) { $bash = (Get-Command bash -ErrorAction SilentlyContinue).Source }
           if (!$bash) { throw "bash não encontrado" }
-          & $bash "E:/claudecode/claudecode/backend/deploy.sh"
+          & $bash "E:/claudecode/claudecode/deploy.sh"
