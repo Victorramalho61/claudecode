@@ -26,7 +26,7 @@ def _default_period() -> tuple[str, str]:
 async def dashboard_summary(
     from_date: str | None = Query(None, alias="from"),
     to_date: str | None = Query(None, alias="to"),
-    _: dict = Depends(get_current_user),
+    _: dict = Depends(require_role("admin")),
 ):
     p_from, p_to = (from_date, to_date) if (from_date and to_date) else _default_period()
     db = get_supabase()
@@ -38,7 +38,7 @@ async def dashboard_summary(
 async def dashboard_sla_by_group(
     from_date: str | None = Query(None, alias="from"),
     to_date: str | None = Query(None, alias="to"),
-    _: dict = Depends(get_current_user),
+    _: dict = Depends(require_role("admin")),
 ):
     p_from, p_to = (from_date, to_date) if (from_date and to_date) else _default_period()
     db = get_supabase()
@@ -49,7 +49,7 @@ async def dashboard_sla_by_group(
 @router.get("/dashboard/agents")
 async def dashboard_agents(
     month: str | None = Query(None, description="YYYY-MM"),
-    _: dict = Depends(get_current_user),
+    _: dict = Depends(require_role("admin")),
 ):
     now_brt = datetime.now(_BRT)
     if month:
@@ -71,7 +71,7 @@ async def dashboard_top_requesters(
     from_date: str | None = Query(None, alias="from"),
     to_date: str | None = Query(None, alias="to"),
     limit: int = Query(5, ge=1, le=20),
-    _: dict = Depends(get_current_user),
+    _: dict = Depends(require_role("admin")),
 ):
     p_from, p_to = (from_date, to_date) if (from_date and to_date) else _default_period()
     db = get_supabase()
@@ -87,7 +87,7 @@ async def dashboard_top_requesters(
 async def dashboard_csat(
     from_date: str | None = Query(None, alias="from"),
     to_date: str | None = Query(None, alias="to"),
-    _: dict = Depends(get_current_user),
+    _: dict = Depends(require_role("admin")),
 ):
     p_from, p_to = (from_date, to_date) if (from_date and to_date) else _default_period()
     db = get_supabase()
@@ -96,7 +96,7 @@ async def dashboard_csat(
 
 
 @router.get("/dashboard/live")
-async def dashboard_live(_: dict = Depends(get_current_user)):
+async def dashboard_live(_: dict = Depends(require_role("admin"))):
     return await get_live_metrics()
 
 
@@ -112,7 +112,7 @@ async def list_tickets(
     csat_rating: int | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    _: dict = Depends(get_current_user),
+    _: dict = Depends(require_role("admin")),
 ):
     db = get_supabase()
 
@@ -194,7 +194,7 @@ def _enrich_ticket_names(db, rows: list[dict]) -> list[dict]:
 
 
 @router.get("/sync/status")
-async def sync_status(_: dict = Depends(get_current_user)):
+async def sync_status(_: dict = Depends(require_role("admin"))):
     db = get_supabase()
     result = (
         db.table("freshservice_sync_log")
@@ -207,7 +207,7 @@ async def sync_status(_: dict = Depends(get_current_user)):
 
 
 @router.get("/agent/daily-summary")
-async def agent_daily_summary(_: dict = Depends(get_current_user)):
+async def agent_daily_summary(_: dict = Depends(require_role("admin"))):
     db = get_supabase()
     result = (
         db.table("freshservice_sync_log")

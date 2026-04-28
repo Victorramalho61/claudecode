@@ -158,8 +158,8 @@ services:
     image: kong:2.8.1
     restart: unless-stopped
     ports:
-      - "54321:8000/tcp"
-      - "54322:8443/tcp"
+      - "127.0.0.1:54321:8000/tcp"
+      - "127.0.0.1:54322:8443/tcp"
     volumes:
       - ./volumes/api/kong.yml:/var/lib/kong/kong.yml:ro
     environment:
@@ -208,7 +208,7 @@ services:
       - "443:443"
       - "80:80"
     depends_on:
-      - backend
+      - core-service
     networks:
       - app_net
 
@@ -368,7 +368,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - evolution_data:/evolution/instances
     environment:
