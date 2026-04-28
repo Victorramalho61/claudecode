@@ -191,6 +191,7 @@ services:
       SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
       AUTH_JWT_SECRET: ${SUPABASE_JWT_SECRET}
       NEXT_PUBLIC_ENABLE_LOGS: "false"
+      HOSTNAME: "0.0.0.0"
     networks:
       - app_net
 

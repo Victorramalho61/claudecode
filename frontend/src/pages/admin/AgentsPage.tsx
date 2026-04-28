@@ -44,6 +44,7 @@ function AgentForm({ initial, onClose, onSaved, token }: AgentFormProps) {
   const [description, setDescription] = useState(initial?.description ?? "");
   const [agentType, setAgentType] = useState<AgentType>(initial?.agent_type ?? "freshservice_sync");
   const [code, setCode] = useState<string>((initial?.config?.code as string) ?? "");
+  const [fsMode, setFsMode] = useState<string>((initial?.config?.mode as string) ?? "daily");
   const [scheduleType, setScheduleType] = useState<ScheduleType>(initial?.schedule_type ?? "manual");
   const [scheduleConfig, setScheduleConfig] = useState<Record<string, unknown>>(
     initial?.schedule_config ?? {}
@@ -69,7 +70,7 @@ function AgentForm({ initial, onClose, onSaved, token }: AgentFormProps) {
         name,
         description,
         agent_type: agentType,
-        config: agentType === "script" ? { code } : {},
+        config: agentType === "script" ? { code } : agentType === "freshservice_sync" ? { mode: fsMode } : {},
         schedule_type: scheduleType,
         schedule_config: scheduleConfig,
         enabled,
@@ -139,6 +140,20 @@ function AgentForm({ initial, onClose, onSaved, token }: AgentFormProps) {
                 className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-xs font-mono text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-green"
                 placeholder="# Código Python aqui&#10;# Disponível: SUPABASE_URL, SUPABASE_ANON_KEY (read-only)&#10;# Use print() para registrar resultados"
               />
+            </div>
+          )}
+
+          {agentType === "freshservice_sync" && (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Modo de sync</label>
+              <select
+                value={fsMode}
+                onChange={(e) => setFsMode(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none"
+              >
+                <option value="daily">Diário — busca tickets atualizados ontem</option>
+                <option value="backfill">Backfill — busca todo o histórico (150k+ tickets)</option>
+              </select>
             </div>
           )}
 

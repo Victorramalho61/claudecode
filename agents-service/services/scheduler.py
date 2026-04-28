@@ -2,6 +2,7 @@ import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 logger = logging.getLogger(__name__)
 _scheduler = AsyncIOScheduler(timezone="UTC")
@@ -26,7 +27,7 @@ def _build_trigger(agent: dict):
 
     if stype == "interval":
         m = max(1, int(config.get("minutes", 60)))
-        return CronTrigger(minute=f"*/{m}", timezone=_TZ)
+        return IntervalTrigger(minutes=m, timezone=_TZ)
     elif stype == "daily":
         return CronTrigger(
             hour=int(config.get("hour", 9)),

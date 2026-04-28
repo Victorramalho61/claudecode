@@ -22,7 +22,6 @@ export default function ClaudeChatModal({ token, onClose, onAgentCreated }: Prop
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   async function send(e: FormEvent) {
@@ -35,7 +34,6 @@ export default function ClaudeChatModal({ token, onClose, onAgentCreated }: Prop
     setMessages(nextMessages);
     setInput("");
     setLoading(true);
-    setError(null);
 
     const history = nextMessages.slice(0, -1).map((m) => ({
       role: m.role,
@@ -58,7 +56,6 @@ export default function ClaudeChatModal({ token, onClose, onAgentCreated }: Prop
     } catch (err) {
       const msg =
         err instanceof ApiError ? err.message : "Erro ao comunicar com o assistente.";
-      setError(msg);
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: `❌ ${msg}` },

@@ -38,7 +38,7 @@ async def run_agent(agent: dict) -> dict:
 
     try:
         if agent["agent_type"] == "freshservice_sync":
-            output = await _run_freshservice_sync()
+            output = await _run_freshservice_sync(agent)
         elif agent["agent_type"] == "script":
             output = await asyncio.get_event_loop().run_in_executor(
                 None, _run_script_sync, agent
@@ -64,16 +64,19 @@ async def run_agent(agent: dict) -> dict:
         return {"status": "error", "run_id": run_id, "error": str(exc)}
 
 
-async def _run_freshservice_sync() -> str:
+async def _run_freshservice_sync(agent: dict) -> str:
+    mode = (agent.get("config") or {}).get("mode", "daily")
+    if mode not in ("daily", "backfill"):
+        mode = "daily"
     freshservice_url = os.getenv("FRESHSERVICE_SERVICE_URL", "http://freshservice-service:8003")
     token = _get_service_token()
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(timeout=600.0) as client:
         r = await client.post(
-            f"{freshservice_url}/api/freshservice/sync/daily",
+            f"{freshservice_url}/api/freshservice/sync/{mode}",
             headers={"Authorization": f"Bearer {token}"},
         )
         r.raise_for_status()
-    return "Sync Freshservice disparado via HTTP"
+    return f"Sync Freshservice ({mode}) disparado via HTTP"
 
 
 def _run_script_sync(agent: dict) -> str:
