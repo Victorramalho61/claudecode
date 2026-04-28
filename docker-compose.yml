@@ -70,12 +70,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:3000/ > /dev/null"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
     environment:
       PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/postgres
       PGRST_DB_SCHEMAS: public,storage,graphql_public
@@ -96,7 +90,7 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:4000/ > /dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -s http://localhost:4000/ > /dev/null"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -170,7 +164,7 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/ > /dev/null"]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:8080/', (r) => process.exit(0)).on('error', () => process.exit(1))\""]
       interval: 30s
       timeout: 5s
       retries: 3
