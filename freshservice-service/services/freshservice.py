@@ -86,7 +86,13 @@ class FreshserviceClient:
         return self._get("/groups", {"per_page": PAGE_SIZE}).get("groups", [])
 
     def list_companies(self, page: int = 1) -> list[dict]:
-        return self._get("/companies", {"page": page, "per_page": PAGE_SIZE}).get("companies", [])
+        try:
+            return self._get("/companies", {"page": page, "per_page": PAGE_SIZE}).get("companies", [])
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                logger.warning("Endpoint /companies nao disponivel neste plano Freshservice — ignorando")
+                return []
+            raise
 
     def get_open_tickets(self, page: int = 1) -> list[dict]:
         # status:2 = Open; sorted oldest-first via /tickets/filter
