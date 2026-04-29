@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 
-from app_logger import log_event
+from services.app_logger import log_event
 from db import get_settings, get_supabase
 
 logger = logging.getLogger(__name__)
