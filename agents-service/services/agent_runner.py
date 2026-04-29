@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # Apenas estas vars de ambiente chegam ao subprocess — SERVICE_ROLE_KEY e
 # ANTHROPIC_API_KEY são explicitamente excluídos para evitar acesso indevido.
-_SAFE_ENV_KEYS = {"PATH", "HOME", "LANG", "TZ", "PYTHONPATH"}
+_SAFE_ENV_KEYS = {"PATH", "HOME", "LANG", "TZ", "PYTHONPATH", "GITHUB_TOKEN"}
 
 
 def _get_service_token() -> str:
