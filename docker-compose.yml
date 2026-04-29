@@ -408,6 +408,9 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
       FRONTEND_URL: ${FRONTEND_URL}
       FRESHSERVICE_SERVICE_URL: http://freshservice-service:8003
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    volumes:
+      - ./docs:/app/docs:ro
     networks:
       - app_net
     healthcheck:
