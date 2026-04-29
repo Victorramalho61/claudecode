@@ -18,6 +18,8 @@ _BRT = timezone(timedelta(hours=-3))
 _RATING_MAP = {"Happy": 3, "Neutral": 2, "Unhappy": 1}
 _PHASE_ORDER = ["resolved", "closed", "csat", "metadata"]
 _PHASE_STATUS = {"resolved": 4, "closed": 5}
+# Workspaces ativos (id=23 Financeiro está em draft)
+_ACTIVE_WORKSPACE_IDS = [2, 5, 6, 13, 18, 19, 21, 22, 24, 25]
 
 # {key: (data, monotonic_expires)}
 _live_cache: dict[str, tuple[dict, float]] = {}
@@ -52,22 +54,19 @@ class FreshserviceClient:
                 raise
         return {}
 
-    def list_tickets_by_status(self, status: int, page: int = 1) -> list[dict]:
+    def list_tickets_by_status(self, status: int, page: int = 1, workspace_id: int | None = None) -> list[dict]:
         """Backfill: fetch tickets by exact status via /tickets/filter."""
-        return self._get("/tickets/filter", {
-            "query": f'"status:{status}"',
-            "page": page,
-            "per_page": PAGE_SIZE,
-        }).get("tickets", [])
+        params: dict = {"query": f'"status:{status}"', "page": page, "per_page": PAGE_SIZE}
+        if workspace_id is not None:
+            params["workspace_id"] = workspace_id
+        return self._get("/tickets/filter", params).get("tickets", [])
 
-    def list_updated_tickets(self, updated_since: str, page: int = 1) -> list[dict]:
+    def list_updated_tickets(self, updated_since: str, page: int = 1, workspace_id: int | None = None) -> list[dict]:
         """Daily sync: all tickets updated since a given timestamp."""
-        return self._get("/tickets", {
-            "updated_since": updated_since,
-            "include": "stats",
-            "page": page,
-            "per_page": PAGE_SIZE,
-        }).get("tickets", [])
+        params: dict = {"updated_since": updated_since, "include": "stats", "page": page, "per_page": PAGE_SIZE}
+        if workspace_id is not None:
+            params["workspace_id"] = workspace_id
+        return self._get("/tickets", params).get("tickets", [])
 
     def list_satisfaction_ratings(
         self,
@@ -116,6 +115,7 @@ def _extract_ticket_row(raw: dict) -> dict:
     stats = raw.get("stats") or {}
     return {
         "id":              raw["id"],
+        "workspace_id":    raw.get("workspace_id"),
         "subject":         raw.get("subject") or "",
         "status":          raw.get("status"),
         "priority":        raw.get("priority"),
@@ -207,9 +207,9 @@ def _sync_metadata(db, client: FreshserviceClient) -> None:
     logger.info("Freshservice metadata sync completed")
 
 
-def _save_checkpoint(db, log_id: int, phase: str, page: int, upserted: int) -> None:
+def _save_checkpoint(db, log_id: int, workspace_id: int | None, phase: str, page: int, upserted: int) -> None:
     db.table("freshservice_sync_log").update({
-        "checkpoint":       {"phase": phase, "page": page},
+        "checkpoint":       {"workspace_id": workspace_id, "phase": phase, "page": page},
         "tickets_upserted": upserted,
     }).eq("id", log_id).execute()
 
@@ -246,51 +246,74 @@ def _run_backfill_sync() -> int:
         checkpoint = {}
         total_upserted = 0
 
-    current_phase = checkpoint.get("phase", "resolved")
-    start_page = checkpoint.get("page", 1)
+    # Determina ponto de retomada — suporta checkpoint legado (sem workspace_id)
+    ckpt_ws   = checkpoint.get("workspace_id", _ACTIVE_WORKSPACE_IDS[0])
+    ckpt_phase = checkpoint.get("phase", "resolved")
+    ckpt_page  = checkpoint.get("page", 1)
 
-    if current_phase not in _PHASE_ORDER:
-        current_phase = "resolved"
-    start_idx = _PHASE_ORDER.index(current_phase)
+    if ckpt_ws not in _ACTIVE_WORKSPACE_IDS:
+        ckpt_ws = _ACTIVE_WORKSPACE_IDS[0]
+    if ckpt_phase not in _PHASE_ORDER:
+        ckpt_phase = "resolved"
+
+    ws_start_idx    = _ACTIVE_WORKSPACE_IDS.index(ckpt_ws)
+    phase_start_idx = _PHASE_ORDER.index(ckpt_phase)
 
     try:
-        for phase in _PHASE_ORDER[start_idx:]:
-            page = start_page if phase == current_phase else 1
+        for ws_id in _ACTIVE_WORKSPACE_IDS[ws_start_idx:]:
+            is_first_ws   = (ws_id == ckpt_ws)
+            phase_start   = phase_start_idx if is_first_ws else 0
 
-            if phase in ("resolved", "closed"):
-                while True:
-                    tickets = client.list_tickets_by_status(status=_PHASE_STATUS[phase], page=page)
-                    if not tickets:
-                        break
-                    rows = [_extract_ticket_row(t) for t in tickets]
-                    _upsert_tickets(db, rows)
-                    total_upserted += len(rows)
-                    logger.info("Backfill %s p%d: %d tickets (total %d)", phase, page, len(rows), total_upserted)
-                    if page % 10 == 0:
-                        log_event("info", "freshservice", f"Backfill {phase} p{page}: {len(rows)} tickets (total {total_upserted})")
-                    _save_checkpoint(db, log_id, phase, page + 1, total_upserted)
-                    if len(tickets) < PAGE_SIZE:
-                        break
-                    page += 1
+            for phase in _PHASE_ORDER[phase_start:]:
+                is_resume_point = is_first_ws and (phase == ckpt_phase)
+                page = ckpt_page if is_resume_point else 1
 
-            elif phase == "csat":
-                while True:
-                    count = _sync_csat_page(db, client, page)
-                    logger.info("Backfill CSAT page %d: %d ratings", page, count)
-                    if count == 0:
-                        break
-                    _save_checkpoint(db, log_id, "csat", page + 1, total_upserted)
-                    if count < PAGE_SIZE:
-                        break
-                    page += 1
+                if phase in ("resolved", "closed"):
+                    while True:
+                        tickets = client.list_tickets_by_status(
+                            status=_PHASE_STATUS[phase], page=page, workspace_id=ws_id
+                        )
+                        if not tickets:
+                            break
+                        rows = [_extract_ticket_row(t) for t in tickets]
+                        _upsert_tickets(db, rows)
+                        total_upserted += len(rows)
+                        logger.info("Backfill ws%d %s p%d: %d tickets (total %d)", ws_id, phase, page, len(rows), total_upserted)
+                        if page % 10 == 0:
+                            log_event("info", "freshservice", f"Backfill ws{ws_id} {phase} p{page}: {len(rows)} tickets (total {total_upserted})")
+                        _save_checkpoint(db, log_id, ws_id, phase, page + 1, total_upserted)
+                        if len(tickets) < PAGE_SIZE:
+                            break
+                        page += 1
 
-            elif phase == "metadata":
-                _sync_metadata(db, client)
+                elif phase == "csat":
+                    # CSAT não é por workspace — executa só uma vez no primeiro workspace
+                    if ws_id == _ACTIVE_WORKSPACE_IDS[0]:
+                        while True:
+                            count = _sync_csat_page(db, client, page)
+                            logger.info("Backfill CSAT page %d: %d ratings", page, count)
+                            if count == 0:
+                                break
+                            _save_checkpoint(db, log_id, ws_id, "csat", page + 1, total_upserted)
+                            if count < PAGE_SIZE:
+                                break
+                            page += 1
 
-            # Move to next phase
-            next_idx = _PHASE_ORDER.index(phase) + 1
-            if next_idx < len(_PHASE_ORDER):
-                _save_checkpoint(db, log_id, _PHASE_ORDER[next_idx], 1, total_upserted)
+                elif phase == "metadata":
+                    # Metadata (agents/groups) não é por workspace — executa só uma vez
+                    if ws_id == _ACTIVE_WORKSPACE_IDS[0]:
+                        _sync_metadata(db, client)
+
+                # Avança para próxima fase
+                next_phase_idx = _PHASE_ORDER.index(phase) + 1
+                if next_phase_idx < len(_PHASE_ORDER):
+                    _save_checkpoint(db, log_id, ws_id, _PHASE_ORDER[next_phase_idx], 1, total_upserted)
+
+            # Avança para próximo workspace
+            next_ws_idx = _ACTIVE_WORKSPACE_IDS.index(ws_id) + 1
+            if next_ws_idx < len(_ACTIVE_WORKSPACE_IDS):
+                _save_checkpoint(db, log_id, _ACTIVE_WORKSPACE_IDS[next_ws_idx], "resolved", 1, total_upserted)
+                log_event("info", "freshservice", f"Backfill ws{ws_id} concluído ({total_upserted} total), iniciando ws{_ACTIVE_WORKSPACE_IDS[next_ws_idx]}")
 
         db.table("freshservice_sync_log").update({
             "status":           "completed",
@@ -299,7 +322,7 @@ def _run_backfill_sync() -> int:
             "tickets_upserted": total_upserted,
         }).eq("id", log_id).execute()
         logger.info("Freshservice backfill completed: %d tickets", total_upserted)
-        log_event("info", "freshservice", f"Backfill concluído: {total_upserted} tickets")
+        log_event("info", "freshservice", f"Backfill concluído: {total_upserted} tickets em {len(_ACTIVE_WORKSPACE_IDS)} workspaces")
         return total_upserted
 
     except Exception as e:
@@ -336,18 +359,19 @@ def _run_daily_sync_sync() -> int:
     total_upserted = 0
 
     try:
-        page = 1
-        while True:
-            tickets = client.list_updated_tickets(updated_since=updated_since, page=page)
-            if not tickets:
-                break
-            rows = [_extract_ticket_row(t) for t in tickets if t.get("status") in (4, 5)]
-            if rows:
-                _upsert_tickets(db, rows)
-                total_upserted += len(rows)
-            if len(tickets) < PAGE_SIZE:
-                break
-            page += 1
+        for ws_id in _ACTIVE_WORKSPACE_IDS:
+            page = 1
+            while True:
+                tickets = client.list_updated_tickets(updated_since=updated_since, page=page, workspace_id=ws_id)
+                if not tickets:
+                    break
+                rows = [_extract_ticket_row(t) for t in tickets if t.get("status") in (4, 5)]
+                if rows:
+                    _upsert_tickets(db, rows)
+                    total_upserted += len(rows)
+                if len(tickets) < PAGE_SIZE:
+                    break
+                page += 1
 
         page = 1
         while True:
