@@ -20,6 +20,12 @@ _PHASE_ORDER = ["resolved", "closed", "csat", "metadata"]
 _PHASE_STATUS = {"resolved": 4, "closed": 5}
 # Workspaces ativos (id=23 Financeiro está em draft)
 _ACTIVE_WORKSPACE_IDS = [2, 5, 6, 13, 18, 19, 21, 22, 24, 25]
+# Data de início aproximada de cada workspace (para gerar chunks trimestrais)
+_WS_START_DATES = {
+    2: "2023-06-01", 5: "2023-08-01", 6: "2023-08-01",
+    13: "2023-11-01", 18: "2025-01-01", 19: "2025-02-01",
+    21: "2025-10-01", 22: "2025-10-01", 24: "2026-03-01", 25: "2026-04-01",
+}
 
 # {key: (data, monotonic_expires)}
 _live_cache: dict[str, tuple[dict, float]] = {}
@@ -64,6 +70,23 @@ class FreshserviceClient:
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 403:
                 logger.warning("Workspace %s: acesso negado (403) — ignorando", workspace_id)
+                return []
+            raise
+
+    def list_tickets_by_date_range(
+        self, status: int, date_from: str, date_to: str,
+        page: int = 1, workspace_id: int | None = None,
+    ) -> list[dict]:
+        """Backfill com chunks: status + intervalo de created_at (evita limite de 10k)."""
+        query = f'"status:{status} AND created_at:>\'{date_from}\' AND created_at:<\'{date_to}\'"'
+        params: dict = {"query": query, "page": page, "per_page": PAGE_SIZE}
+        if workspace_id is not None:
+            params["workspace_id"] = workspace_id
+        try:
+            return self._get("/tickets/filter", params).get("tickets", [])
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code in (403, 404):
+                logger.warning("Workspace %s: %s — ignorando", workspace_id, exc.response.status_code)
                 return []
             raise
 
@@ -219,9 +242,32 @@ def _sync_metadata(db, client: FreshserviceClient) -> None:
     logger.info("Freshservice metadata sync completed")
 
 
-def _save_checkpoint(db, log_id: int, workspace_id: int | None, phase: str, page: int, upserted: int) -> None:
+def _generate_date_chunks(ws_id: int, chunk_months: int = 3) -> list[tuple[str, str]]:
+    """Gera intervalos trimestrais desde o início do workspace até amanhã."""
+    from datetime import date, timedelta
+    start = date.fromisoformat(_WS_START_DATES.get(ws_id, "2023-01-01"))
+    end = date.today() + timedelta(days=1)
+    chunks: list[tuple[str, str]] = []
+    cur = start
+    while cur < end:
+        m = cur.month - 1 + chunk_months
+        nxt = date(cur.year + m // 12, m % 12 + 1, 1)
+        if nxt > end:
+            nxt = end
+        chunks.append((cur.isoformat(), nxt.isoformat()))
+        cur = nxt
+    return chunks
+
+
+def _save_checkpoint(
+    db, log_id: int, workspace_id: int | None, phase: str, page: int, upserted: int,
+    date_from: str | None = None,
+) -> None:
+    cp: dict = {"workspace_id": workspace_id, "phase": phase, "page": page}
+    if date_from:
+        cp["date_from"] = date_from
     db.table("freshservice_sync_log").update({
-        "checkpoint":       {"workspace_id": workspace_id, "phase": phase, "page": page},
+        "checkpoint":       cp,
         "tickets_upserted": upserted,
     }).eq("id", log_id).execute()
 
@@ -259,9 +305,10 @@ def _run_backfill_sync() -> int:
         total_upserted = 0
 
     # Determina ponto de retomada — suporta checkpoint legado (sem workspace_id)
-    ckpt_ws   = checkpoint.get("workspace_id", _ACTIVE_WORKSPACE_IDS[0])
-    ckpt_phase = checkpoint.get("phase", "resolved")
-    ckpt_page  = checkpoint.get("page", 1)
+    ckpt_ws        = checkpoint.get("workspace_id", _ACTIVE_WORKSPACE_IDS[0])
+    ckpt_phase     = checkpoint.get("phase", "resolved")
+    ckpt_page      = checkpoint.get("page", 1)
+    ckpt_date_from = checkpoint.get("date_from")
 
     if ckpt_ws not in _ACTIVE_WORKSPACE_IDS:
         ckpt_ws = _ACTIVE_WORKSPACE_IDS[0]
@@ -273,34 +320,48 @@ def _run_backfill_sync() -> int:
 
     try:
         for ws_id in _ACTIVE_WORKSPACE_IDS[ws_start_idx:]:
-            is_first_ws   = (ws_id == ckpt_ws)
-            phase_start   = phase_start_idx if is_first_ws else 0
+            is_first_ws = (ws_id == ckpt_ws)
+            phase_start = phase_start_idx if is_first_ws else 0
 
             for phase in _PHASE_ORDER[phase_start:]:
-                is_resume_point = is_first_ws and (phase == ckpt_phase)
-                page = ckpt_page if is_resume_point else 1
+                is_resume_phase = is_first_ws and (phase == ckpt_phase)
 
                 if phase in ("resolved", "closed"):
-                    while True:
-                        tickets = client.list_tickets_by_status(
-                            status=_PHASE_STATUS[phase], page=page, workspace_id=ws_id
+                    chunks = _generate_date_chunks(ws_id)
+                    # Determina chunk de retomada
+                    chunk_start = 0
+                    if is_resume_phase and ckpt_date_from:
+                        chunk_start = next(
+                            (i for i, (df, _) in enumerate(chunks) if df >= ckpt_date_from), 0
                         )
-                        if not tickets:
-                            break
-                        rows = [_extract_ticket_row(t) for t in tickets]
-                        _upsert_tickets(db, rows)
-                        total_upserted += len(rows)
-                        logger.info("Backfill ws%d %s p%d: %d tickets (total %d)", ws_id, phase, page, len(rows), total_upserted)
-                        if page % 10 == 0:
-                            log_event("info", "freshservice", f"Backfill ws{ws_id} {phase} p{page}: {len(rows)} tickets (total {total_upserted})")
-                        _save_checkpoint(db, log_id, ws_id, phase, page + 1, total_upserted)
-                        if len(tickets) < PAGE_SIZE:
-                            break
-                        page += 1
+                    for chunk_idx, (date_from, date_to) in enumerate(chunks[chunk_start:], chunk_start):
+                        is_resume_chunk = is_resume_phase and (date_from == ckpt_date_from)
+                        page = ckpt_page if is_resume_chunk else 1
+                        while True:
+                            tickets = client.list_tickets_by_date_range(
+                                status=_PHASE_STATUS[phase], date_from=date_from, date_to=date_to,
+                                page=page, workspace_id=ws_id,
+                            )
+                            if not tickets:
+                                break
+                            rows = [_extract_ticket_row(t) for t in tickets]
+                            _upsert_tickets(db, rows)
+                            total_upserted += len(rows)
+                            logger.info(
+                                "Backfill ws%d %s [%s] p%d: %d tickets (total %d)",
+                                ws_id, phase, date_from[:7], page, len(rows), total_upserted,
+                            )
+                            if page % 10 == 0:
+                                log_event("info", "freshservice",
+                                          f"Backfill ws{ws_id} {phase} {date_from[:7]}: {len(rows)} tickets (total {total_upserted})")
+                            _save_checkpoint(db, log_id, ws_id, phase, page + 1, total_upserted, date_from=date_from)
+                            if len(tickets) < PAGE_SIZE:
+                                break
+                            page += 1
 
                 elif phase == "csat":
-                    # CSAT não é por workspace — executa só uma vez no primeiro workspace
                     if ws_id == _ACTIVE_WORKSPACE_IDS[0]:
+                        page = ckpt_page if is_resume_phase else 1
                         while True:
                             count = _sync_csat_page(db, client, page)
                             logger.info("Backfill CSAT page %d: %d ratings", page, count)
@@ -312,7 +373,6 @@ def _run_backfill_sync() -> int:
                             page += 1
 
                 elif phase == "metadata":
-                    # Metadata (agents/groups) não é por workspace — executa só uma vez
                     if ws_id == _ACTIVE_WORKSPACE_IDS[0]:
                         _sync_metadata(db, client)
 
@@ -325,7 +385,8 @@ def _run_backfill_sync() -> int:
             next_ws_idx = _ACTIVE_WORKSPACE_IDS.index(ws_id) + 1
             if next_ws_idx < len(_ACTIVE_WORKSPACE_IDS):
                 _save_checkpoint(db, log_id, _ACTIVE_WORKSPACE_IDS[next_ws_idx], "resolved", 1, total_upserted)
-                log_event("info", "freshservice", f"Backfill ws{ws_id} concluído ({total_upserted} total), iniciando ws{_ACTIVE_WORKSPACE_IDS[next_ws_idx]}")
+                log_event("info", "freshservice",
+                          f"Backfill ws{ws_id} concluído ({total_upserted} total), iniciando ws{_ACTIVE_WORKSPACE_IDS[next_ws_idx]}")
 
         db.table("freshservice_sync_log").update({
             "status":           "completed",
