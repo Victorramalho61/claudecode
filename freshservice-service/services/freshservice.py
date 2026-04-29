@@ -59,14 +59,26 @@ class FreshserviceClient:
         params: dict = {"query": f'"status:{status}"', "page": page, "per_page": PAGE_SIZE}
         if workspace_id is not None:
             params["workspace_id"] = workspace_id
-        return self._get("/tickets/filter", params).get("tickets", [])
+        try:
+            return self._get("/tickets/filter", params).get("tickets", [])
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 403:
+                logger.warning("Workspace %s: acesso negado (403) — ignorando", workspace_id)
+                return []
+            raise
 
     def list_updated_tickets(self, updated_since: str, page: int = 1, workspace_id: int | None = None) -> list[dict]:
         """Daily sync: all tickets updated since a given timestamp."""
         params: dict = {"updated_since": updated_since, "include": "stats", "page": page, "per_page": PAGE_SIZE}
         if workspace_id is not None:
             params["workspace_id"] = workspace_id
-        return self._get("/tickets", params).get("tickets", [])
+        try:
+            return self._get("/tickets", params).get("tickets", [])
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 403:
+                logger.warning("Workspace %s: acesso negado (403) — ignorando", workspace_id)
+                return []
+            raise
 
     def list_satisfaction_ratings(
         self,
