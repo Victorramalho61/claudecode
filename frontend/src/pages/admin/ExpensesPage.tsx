@@ -162,6 +162,146 @@ function DonutCenter({ cx, cy, total }: { cx: number; cy: number; total: number 
   )
 }
 
+// ── Supplier accordion ────────────────────────────────────────────────────────
+
+interface SupplierGroup {
+  pessoa: string
+  total: number
+  count: number
+  origens: string[]
+  rows: ExpenseRow[]
+}
+
+function buildSupplierGroups(rows: ExpenseRow[]): SupplierGroup[] {
+  const map = new Map<string, SupplierGroup>()
+  for (const row of rows) {
+    const key = row.PESSOA || 'Sem fornecedor'
+    if (!map.has(key)) {
+      map.set(key, { pessoa: key, total: 0, count: 0, origens: [], rows: [] })
+    }
+    const g = map.get(key)!
+    g.total += row.VALOR ?? 0
+    g.count += 1
+    g.rows.push(row)
+    if (row.ORIGEM && !g.origens.includes(row.ORIGEM)) g.origens.push(row.ORIGEM)
+  }
+  return [...map.values()].sort((a, b) => b.total - a.total)
+}
+
+function SupplierAccordion({
+  groups,
+  fmtBrl,
+}: {
+  groups: SupplierGroup[]
+  fmtBrl: (v: number) => string
+}) {
+  const [expanded, setExpanded] = useState<string | null>(null)
+
+  function toggle(key: string) {
+    setExpanded((prev) => (prev === key ? null : key))
+  }
+
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          Gastos por Fornecedor
+          <span className="ml-2 text-xs font-normal text-gray-500">({groups.length} fornecedores)</span>
+        </h2>
+      </div>
+
+      {/* Header row */}
+      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 px-5 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 border-b border-gray-100 dark:border-gray-800">
+        <span>Fornecedor</span>
+        <span className="text-right">Parcelas</span>
+        <span className="text-right w-32">Total</span>
+        <span>Origem</span>
+        <span className="w-5" />
+      </div>
+
+      <div className="divide-y divide-gray-100 dark:divide-gray-800/60">
+        {groups.map((g) => {
+          const isOpen = expanded === g.pessoa
+          return (
+            <div key={g.pessoa}>
+              {/* Summary row — clickable */}
+              <button
+                type="button"
+                onClick={() => toggle(g.pessoa)}
+                className="w-full grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 px-5 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors items-center"
+              >
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate" title={g.pessoa}>
+                  {g.pessoa}
+                </span>
+                <span className="text-xs text-gray-500 text-right tabular-nums">{g.count}</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white text-right tabular-nums w-32 whitespace-nowrap">
+                  {fmtBrl(g.total)}
+                </span>
+                <span className="flex flex-wrap gap-1">
+                  {g.origens.map((o) => <OrigemBadge key={o} origem={o} />)}
+                </span>
+                <span className={`text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''} w-5 text-center`}>
+                  ›
+                </span>
+              </button>
+
+              {/* Expanded detail rows */}
+              {isOpen && (
+                <div className="border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20">
+                  <table className="w-full text-xs px-5">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        {['Conta', 'Valor', 'Vencimento', 'Liquidação', 'Filial', 'Origem', 'Tipo'].map((h) => (
+                          <th
+                            key={h}
+                            className={`px-5 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400 ${h === 'Valor' ? 'text-right' : 'text-left'}`}
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800/40">
+                      {g.rows.map((row, i) => (
+                        <tr key={i} className="hover:bg-white dark:hover:bg-gray-800/30 transition-colors">
+                          <td className="px-5 py-2 max-w-[180px] truncate text-gray-600 dark:text-gray-400" title={row.CONTA ?? ''}>
+                            {row.CONTA || '—'}
+                          </td>
+                          <td className="px-5 py-2 text-right font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
+                            {fmtBrl(row.VALOR ?? 0)}
+                          </td>
+                          <td className="px-5 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                            {row.DATAVENCIMENTO ? row.DATAVENCIMENTO.slice(0, 10) : '—'}
+                          </td>
+                          <td className="px-5 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                            {row.DATALIQUIDACAO ? row.DATALIQUIDACAO.slice(0, 10) : '—'}
+                          </td>
+                          <td className="px-5 py-2 text-gray-500 dark:text-gray-400">{row.FILIAL}</td>
+                          <td className="px-5 py-2"><OrigemBadge origem={row.ORIGEM} /></td>
+                          <td className="px-5 py-2"><TipoBadge tipo={row.TIPO_DOC} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-gray-200 dark:border-gray-700">
+                        <td className="px-5 py-2 text-[10px] text-gray-400">{g.count} lançamentos</td>
+                        <td className="px-5 py-2 text-right font-bold text-gray-900 dark:text-white whitespace-nowrap">
+                          {fmtBrl(g.total)}
+                        </td>
+                        <td colSpan={5} />
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 type ActiveTab = 'gastos' | 'previsao'
@@ -253,6 +393,8 @@ export default function ExpensesPage() {
   const totalRows  = filteredRows.length
   const pageRows   = filteredRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
   const totalPages = Math.ceil(totalRows / PAGE_SIZE)
+
+  const supplierGroups = buildSupplierGroups(filteredRows)
 
   // Build monthly chart data: merge by_origem_mensal with yoy
   const monthlyChartData = (data?.by_origem_mensal ?? []).map((m) => ({
@@ -615,8 +757,11 @@ export default function ExpensesPage() {
             </ChartCard>
           </div>
 
-          {/* Row 3: Tabela de lançamentos */}
-          <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
+          {/* Row 3: Accordion por fornecedor */}
+          <SupplierAccordion groups={supplierGroups} fmtBrl={FMT_BRL} />
+
+          {/* Row 4: Tabela de lançamentos (paginada) */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Lançamentos
