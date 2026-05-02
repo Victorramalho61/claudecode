@@ -208,8 +208,8 @@ function SupplierAccordion({
                 onClick={() => toggle(g.pessoa)}
                 className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors cursor-pointer"
               >
-                <td className="px-5 py-3 max-w-[220px]">
-                  <span className="font-medium text-gray-800 dark:text-gray-100 truncate block" title={g.pessoa}>{g.pessoa}</span>
+                <td className="px-5 py-3">
+                  <span className="font-medium text-gray-800 dark:text-gray-100 break-words">{g.pessoa}</span>
                 </td>
                 <td className="px-5 py-3 text-right text-gray-500 tabular-nums whitespace-nowrap">{g.count}</td>
                 <td className="px-5 py-3 text-right font-semibold text-gray-900 dark:text-white tabular-nums whitespace-nowrap">{fmtBrl(g.total)}</td>
@@ -433,7 +433,17 @@ export default function ExpensesPage() {
             VTC Operadora Logística · Despesas do departamento de TI (K_GESTOR 23)
           </p>
         </div>
-        <YearSelector value={year} onChange={(y) => { setYear(y); setData(null) }} />
+        <div className="flex flex-col items-end gap-1.5">
+          <YearSelector value={year} onChange={(y) => { setYear(y); setData(null) }} />
+          {data?.last_updated && (
+            <span className="text-[11px] text-gray-400 tabular-nums">
+              Atualizado: {new Date(data.last_updated).toLocaleString('pt-BR', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit',
+              })}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── Error banner ───────────────────────────────────────────────────── */}

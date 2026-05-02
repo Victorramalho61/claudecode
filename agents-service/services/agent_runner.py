@@ -39,6 +39,8 @@ async def run_agent(agent: dict) -> dict:
     try:
         if agent["agent_type"] == "freshservice_sync":
             output = await _run_freshservice_sync(agent)
+        elif agent["agent_type"] == "expenses_sync":
+            output = await _run_expenses_sync(agent)
         elif agent["agent_type"] == "script":
             output = await asyncio.get_event_loop().run_in_executor(
                 None, _run_script_sync, agent
@@ -62,6 +64,24 @@ async def run_agent(agent: dict) -> dict:
         }).eq("id", run_id).execute()
         log_event("error", "agents", f"Erro no agente '{agent['name']}'", detail=str(exc))
         return {"status": "error", "run_id": run_id, "error": str(exc)}
+
+
+async def _run_expenses_sync(agent: dict) -> str:
+    import time
+    expenses_url = os.getenv("EXPENSES_SERVICE_URL", "http://expenses-service:8006")
+    token = _get_service_token()
+    t0 = time.monotonic()
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        r = await client.post(
+            f"{expenses_url}/api/expenses/sync",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        r.raise_for_status()
+    elapsed = round(time.monotonic() - t0)
+    data = r.json()
+    msg = data.get("message", "sync iniciado")
+    log_event("info", "expenses_sync", f"Sync Gastos TI: {msg} em {elapsed}s")
+    return f"{msg} ({elapsed}s)"
 
 
 async def _run_freshservice_sync(agent: dict) -> str:

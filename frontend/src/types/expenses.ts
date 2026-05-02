@@ -58,6 +58,7 @@ export interface ExpenseRow {
 }
 
 export interface ExpenseDashboard {
+  last_updated?: string | null
   kpis: DashboardKPIs
   by_month: ExpenseByMonth[]
   by_origem: ExpenseByOrigem[]

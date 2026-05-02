@@ -152,3 +152,22 @@ ALTER TABLE public.system_checks      DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.agents             DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.agent_runs                DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.password_reset_tokens     DISABLE ROW LEVEL SECURITY;
+
+-- ── expenses_cache ────────────────────────────────────────────────────────────
+-- Cache de dados pré-computados do módulo Gastos TI.
+-- Populado pelo agente expenses_sync (diariamente às 06:00 BRT).
+CREATE TABLE IF NOT EXISTS public.expenses_cache (
+    id          SERIAL PRIMARY KEY,
+    year        INTEGER  NOT NULL,
+    cache_key   TEXT     NOT NULL,
+    payload     JSONB    NOT NULL,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    status      TEXT     NOT NULL DEFAULT 'success',
+    error_msg   TEXT,
+    UNIQUE (year, cache_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_expenses_cache_year ON public.expenses_cache(year);
+CREATE INDEX IF NOT EXISTS idx_expenses_cache_updated ON public.expenses_cache(updated_at DESC);
+
+ALTER TABLE public.expenses_cache DISABLE ROW LEVEL SECURITY;
