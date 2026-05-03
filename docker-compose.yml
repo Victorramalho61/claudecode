@@ -231,12 +231,6 @@ services:
     depends_on:
       - kong
       - meta
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ 2>/dev/null || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
     environment:
       STUDIO_PG_META_URL: http://meta:8080
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -391,6 +385,36 @@ services:
       retries: 3
       start_period: 15s
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: jarvis-ollama
+    restart: unless-stopped
+    logging: *logging
+    # Limite mínimo funcional para llama3.2:1b (~1.1B params):
+    #   - 2 GB RAM garante carregamento do modelo + contexto de inferência
+    #   - 2 CPUs evita monopolizar o servidor durante geração de tokens
+    # Para modelos maiores (llama3.1:8b) aumente para mem_limit: 6g / cpus: "4"
+    mem_limit: 2g
+    mem_reservation: 1g
+    cpus: "2"
+    environment:
+      # Limita paralelismo interno do runtime GGML
+      OLLAMA_NUM_PARALLEL: "1"
+      # Mantém o modelo carregado por 5 min após último uso (libera RAM quando ocioso)
+      OLLAMA_KEEP_ALIVE: "5m"
+      # Máximo de tokens de contexto por requisição (reduz uso de RAM)
+      OLLAMA_MAX_LOADED_MODELS: "1"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - app_net
+    # GPU opcional: descomentar se servidor tiver NVIDIA
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [gpu]
+
   agents-service:
     build:
       context: ./agents-service
@@ -401,6 +425,8 @@ services:
         condition: service_healthy
       kong:
         condition: service_started
+      ollama:
+        condition: service_started
     environment:
       SUPABASE_URL: http://kong:8000
       SUPABASE_KEY: ${SERVICE_ROLE_KEY}
@@ -409,9 +435,25 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
       FRONTEND_URL: ${FRONTEND_URL}
       FRESHSERVICE_SERVICE_URL: http://freshservice-service:8003
+      EXPENSES_SERVICE_URL: http://expenses-service:8006
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_REPO: ${GITHUB_REPO:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      # PostgreSQL direto para db_dba_agent
+      POSTGRES_DIRECT_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
+      # Pipelines LangGraph
+      MONITORING_INTERVAL_MINUTES: ${MONITORING_INTERVAL_MINUTES:-15}
+      SECURITY_INTERVAL_MINUTES: ${SECURITY_INTERVAL_MINUTES:-30}
+      CICD_INTERVAL_MINUTES: ${CICD_INTERVAL_MINUTES:-5}
+      DBA_INTERVAL_HOURS: ${DBA_INTERVAL_HOURS:-4}
+      GOVERNANCE_CRON_HOUR: ${GOVERNANCE_CRON_HOUR:-6}
+      EVOLUTION_CRON_HOUR: ${EVOLUTION_CRON_HOUR:-7}
+      EVENT_CONSUMER_POLL_SECONDS: ${EVENT_CONSUMER_POLL_SECONDS:-60}
     volumes:
       - ./docs:/app/docs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - app_net
     healthcheck:
@@ -496,7 +538,10 @@ volumes:
     name: jarvis_storage_data
   evolution_data:
     name: jarvis_evolution_data
+  ollama_data:
+    name: jarvis_ollama_data
 
 networks:
   app_net:
     driver: bridge
+

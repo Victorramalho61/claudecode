@@ -1,0 +1,90 @@
+# Overlay de desenvolvimento — reduz limites de RAM/CPU para economizar recursos.
+#
+# USO:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# ANTES de subir, pare os serviços não essenciais para dev:
+#   docker compose stop ollama studio meta imgproxy evolution-api
+#
+# Se tiver GROQ_API_KEY no .env, adicione também: GROQ_API_KEY=<chave>
+# e o agents-service usa Groq em vez de Ollama (ollama pode ficar parado).
+
+name: jarvis
+
+services:
+
+  # Banco — reduz de 1500m/2cpu para 768m/1cpu
+  db:
+    mem_limit: 768m
+    cpus: "1"
+
+  # Kong — reduz de 1000m/2cpu para 384m/1cpu
+  kong:
+    mem_limit: 384m
+    cpus: "1"
+
+  # Realtime — reduz de 512m/1cpu para 256m/0.5cpu
+  realtime:
+    mem_limit: 256m
+    cpus: "0.5"
+
+  # Auth / Rest / Storage — já pequenos, mantém ou reduz levemente
+  auth:
+    mem_limit: 192m
+    cpus: "0.25"
+
+  rest:
+    mem_limit: 192m
+    cpus: "0.25"
+
+  storage:
+    mem_limit: 192m
+    cpus: "0.25"
+
+  # Microserviços da aplicação — adiciona limites (atualmente sem limite)
+  core-service:
+    mem_limit: 256m
+    cpus: "0.5"
+
+  monitoring-service:
+    mem_limit: 256m
+    cpus: "0.5"
+
+  freshservice-service:
+    mem_limit: 256m
+    cpus: "0.5"
+
+  moneypenny-service:
+    mem_limit: 256m
+    cpus: "0.5"
+
+  expenses-service:
+    mem_limit: 256m
+    cpus: "0.5"
+
+  # Agents-service precisa de mais por conta dos agentes LangGraph
+  agents-service:
+    mem_limit: 512m
+    cpus: "1"
+
+  monitor-agent:
+    mem_limit: 128m
+    cpus: "0.25"
+
+  # Frontend — se estiver desenvolvendo localmente (npm run dev), pode parar:
+  #   docker compose stop frontend
+  # Caso mantenha rodando:
+  frontend:
+    mem_limit: 256m
+    cpus: "0.5"
+
+  # Ollama em dev — limite ainda mais restrito: modelo 1b funciona com 1.5g
+  # Se tiver GROQ_API_KEY no .env, mantenha ollama parado (não é necessário)
+  ollama:
+    mem_limit: 1500m
+    mem_reservation: 1g
+    cpus: "1"
+    environment:
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_KEEP_ALIVE: "2m"
+      OLLAMA_MAX_LOADED_MODELS: "1"

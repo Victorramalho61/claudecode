@@ -171,10 +171,14 @@ def _extract_ticket_row(raw: dict) -> dict:
     }
 
 
+_UPSERT_BATCH = 5
+
+
 def _upsert_tickets(db, rows: list[dict]) -> None:
     if not rows:
         return
-    db.table("freshservice_tickets").upsert(rows).execute()
+    for i in range(0, len(rows), _UPSERT_BATCH):
+        db.table("freshservice_tickets").upsert(rows[i:i + _UPSERT_BATCH]).execute()
 
 
 def _sync_csat_page(
@@ -457,18 +461,20 @@ def _run_daily_sync_sync() -> int:
         p_from = yesterday.astimezone(timezone.utc).isoformat()
         p_to = today.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc).isoformat()
 
-        summary_raw = db.rpc("freshservice_summary", {"p_from": p_from, "p_to": p_to}).execute().data or {}
-
-        stats = {
-            "date":               yesterday.strftime("%Y-%m-%d"),
-            "total_closed":       summary_raw.get("total_closed", 0),
-            "csat_avg":           summary_raw.get("csat_avg"),
-            "sla_breach_pct":     summary_raw.get("sla_breach_pct"),
-            "avg_resolution_min": summary_raw.get("avg_resolution_min"),
-            "tickets_synced":     total_upserted,
-        }
-
-        summary_json = generate_daily_summary_sync(stats)
+        summary_json = None
+        try:
+            summary_raw = db.rpc("freshservice_summary", {"p_from": p_from, "p_to": p_to}).execute().data or {}
+            stats = {
+                "date":               yesterday.strftime("%Y-%m-%d"),
+                "total_closed":       summary_raw.get("total_closed", 0),
+                "csat_avg":           summary_raw.get("csat_avg"),
+                "sla_breach_pct":     summary_raw.get("sla_breach_pct"),
+                "avg_resolution_min": summary_raw.get("avg_resolution_min"),
+                "tickets_synced":     total_upserted,
+            }
+            summary_json = generate_daily_summary_sync(stats)
+        except Exception as e:
+            logger.warning("Daily summary generation failed (sync data saved): %s", e)
 
         db.table("freshservice_sync_log").update({
             "status":           "completed",
