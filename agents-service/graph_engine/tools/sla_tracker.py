@@ -121,6 +121,11 @@ PREDEFINED_SLAS: dict[str, list[tuple]] = {
         ("new_automations_per_cycle",   "Nº de novas automações identificadas",      1.0,">=", "count",  0.0),
         ("time_saved_hours",            "Horas salvas por automação no ciclo",       1.0,">=", "hours",  0.0),
     ],
+    "cto_assessor_agent": [
+        ("proposals_reviewed_pct",  "% de proposals aprovadas pelo CTO revisadas pelo Assessor", 100.0,">=", "%",     90.0),
+        ("avg_quality_score",       "Score médio de qualidade das proposals revisadas",            7.0,">=", "count",  5.0),
+        ("rejection_rate_pct",      "% de proposals rejeitadas (alerta se muito alto)",            30.0,"<=", "%",     20.0),
+    ],
     "agent_health_supervisor": [
         ("agents_healthy_pct",          "% de agentes do sistema em estado OK",    100.0,">=", "%",     90.0),
         ("failing_agents_count",        "Nº de agentes em estado failing",            0.0,"<=", "count",  2.0),

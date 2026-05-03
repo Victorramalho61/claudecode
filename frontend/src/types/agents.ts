@@ -50,6 +50,12 @@ export interface Proposal {
   approved_at?: string;
   rejection_reason?: string;
   implementation_error?: string;
+  assessor_status?: "pending_review" | "approved" | "rejected" | "needs_revision" | "validated";
+  assessor_score?: number;
+  assessor_feedback?: string;
+  assessor_tags?: string[];
+  revision_count?: number;
+  reviewed_at?: string;
   created_at: string;
 }
 

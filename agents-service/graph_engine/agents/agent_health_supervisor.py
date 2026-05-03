@@ -46,6 +46,8 @@ _AGENT_EXPECTED_INTERVALS: dict[str, float] = {
     "proposal_supervisor":   26.0,
     # LLM Manager — monitora saúde e SLA dos LLMs
     "llm_manager_agent":     26.0,
+    # CTO Assessor — crivo final das proposals
+    "cto_assessor_agent":    26.0,
     # Monitoring pipeline agents
     "agent_health_supervisor": 0.25,  # próprio — monitora a si mesmo
     # CTO roda em todos os pipelines

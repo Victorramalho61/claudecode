@@ -45,6 +45,8 @@ _AGENT_REGISTRY: dict[str, str] = {
     "proposal_supervisor":     "graph_engine.agents.proposal_supervisor",
     # LLM Manager — monitora saúde dos LLMs e SLA de acesso dos agentes
     "llm_manager_agent":       "graph_engine.agents.llm_manager_agent",
+    # CTO Assessor — arquiteto sênior, segunda opinião e crivo final das proposals
+    "cto_assessor_agent":      "graph_engine.agents.cto_assessor_agent",
     # Lote 2 — novos agentes de qualidade, DBA, CI/CD e evolução
     "log_strategic_advisor":  "graph_engine.agents.log_strategic_advisor",
     "cicd_monitor":           "graph_engine.agents.cicd_monitor",

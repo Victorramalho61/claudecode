@@ -37,6 +37,22 @@ const STATUS_LABEL: Record<string, string> = {
   implementation_failed: "Falhou",
 };
 
+const ASSESSOR_STYLE: Record<string, string> = {
+  pending_review:  "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+  approved:        "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+  validated:       "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+  needs_revision:  "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
+  rejected:        "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+};
+
+const ASSESSOR_LABEL: Record<string, string> = {
+  pending_review: "Aguarda Assessor",
+  approved:       "Assessor OK",
+  validated:      "Validada ✓",
+  needs_revision: "Revisar",
+  rejected:       "Assessor Rejeitou",
+};
+
 function fmt(iso?: string) {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
@@ -201,6 +217,12 @@ export default function ProposalsPage() {
                       <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${STATUS_STYLE[p.validation_status] ?? ""}`}>
                         {STATUS_LABEL[p.validation_status] ?? p.validation_status}
                       </span>
+                      {p.assessor_status && p.assessor_status !== "pending_review" && (
+                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${ASSESSOR_STYLE[p.assessor_status] ?? ""}`}>
+                          {ASSESSOR_LABEL[p.assessor_status] ?? p.assessor_status}
+                          {p.assessor_score !== undefined && ` ${p.assessor_score}/10`}
+                        </span>
+                      )}
                       <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
                         {p.proposal_type}
                       </span>
@@ -313,6 +335,22 @@ export default function ProposalsPage() {
                       <div>
                         <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">Erro de implementação:</p>
                         <p className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded p-2 font-mono">{p.implementation_error}</p>
+                      </div>
+                    )}
+                    {p.assessor_feedback && (
+                      <div>
+                        <p className="text-xs font-medium text-purple-600 dark:text-purple-400 mb-1">
+                          Revisão do Assessor {p.assessor_score !== undefined && `(${p.assessor_score}/10)`}
+                          {(p.revision_count ?? 0) > 0 && <span className="ml-1 text-gray-400">— revisão #{p.revision_count}</span>}
+                        </p>
+                        <pre className="text-xs text-gray-600 dark:text-gray-300 bg-purple-50 dark:bg-purple-900/10 rounded p-2 overflow-x-auto max-h-40 whitespace-pre-wrap">{p.assessor_feedback}</pre>
+                        {p.assessor_tags && p.assessor_tags.length > 0 && (
+                          <div className="flex gap-1 mt-1 flex-wrap">
+                            {p.assessor_tags.map(tag => (
+                              <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{tag}</span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                     <div className="flex gap-4 text-xs text-gray-400 pt-1">
