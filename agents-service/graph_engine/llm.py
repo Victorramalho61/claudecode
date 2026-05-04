@@ -176,16 +176,18 @@ def _make_huggingface(model: str = "mistralai/Mistral-7B-Instruct-v0.3") -> Any 
 
 
 def _make_google(model: str = "gemini-1.5-flash") -> Any | None:
+    """Usa o endpoint OpenAI-compat do Google AI Studio (mais estável que langchain-google-genai)."""
     s = get_settings()
     if not s.google_api_key:
         return None
     try:
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        return ChatGoogleGenerativeAI(
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
             model=model,
-            google_api_key=s.google_api_key,
+            api_key=s.google_api_key,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
             temperature=0,
-            max_output_tokens=4096,
+            max_tokens=4096,
         )
     except Exception as e:
         log.warning("Google Gemini indisponível: %s", e)
@@ -271,7 +273,7 @@ class LLMRouter:
         base = str(base)
         if "cerebras" in base:
             return "cerebras"
-        if "google" in cls.lower() or "genai" in cls.lower():
+        if "generativelanguage" in base or "google" in cls.lower() or "genai" in cls.lower():
             return "google"
         if "nvidia" in base:
             return "nvidia"

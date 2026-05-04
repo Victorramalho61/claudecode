@@ -87,9 +87,10 @@ def _check_provider(provider: str, model: str | None, key_field: str | None) -> 
             from langchain_mistralai import ChatMistralAI
             llm = ChatMistralAI(model=model, api_key=s.mistral_api_key, temperature=0, max_tokens=50)
         elif provider == "google":
-            from langchain_google_genai import ChatGoogleGenerativeAI
-            llm = ChatGoogleGenerativeAI(model=model, google_api_key=s.google_api_key,
-                                         temperature=0, max_output_tokens=50)
+            from langchain_openai import ChatOpenAI
+            llm = ChatOpenAI(model=model, api_key=s.google_api_key,
+                             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                             temperature=0, max_tokens=50)
         elif provider == "deepinfra":
             from langchain_openai import ChatOpenAI
             llm = ChatOpenAI(model=model, api_key=s.deepinfra_api_key,
