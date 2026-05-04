@@ -175,7 +175,7 @@ def _make_huggingface(model: str = "mistralai/Mistral-7B-Instruct-v0.3") -> Any 
         return None
 
 
-def _make_google(model: str = "gemini-2.0-flash") -> Any | None:
+def _make_google(model: str = "gemini-1.5-flash") -> Any | None:
     s = get_settings()
     if not s.google_api_key:
         return None
@@ -366,7 +366,7 @@ def get_reasoning_llm() -> Any:
     """Cascata: Cerebras → Google → Groq 70B → Nvidia → Together → OpenRouter → Mistral → Fireworks → DeepInfra → HF → Ollama."""
     return (
         _make_cerebras("llama3.3-70b")
-        or _make_google("gemini-2.0-flash")
+        or _make_google("gemini-1.5-flash")
         or _make_groq("llama-3.3-70b-versatile")
         or _make_groq("llama-3.1-8b-instant")
         or _make_nvidia("meta/llama-3.1-70b-instruct")
@@ -384,7 +384,7 @@ def get_fast_llm() -> Any:
     """LLM mais rápido disponível."""
     return (
         _make_cerebras("llama3.1-8b")
-        or _make_google("gemini-2.0-flash-lite")
+        or _make_google("gemini-1.5-flash-8b")
         or _make_groq("llama-3.1-8b-instant")
         or _make_groq("gemma2-9b-it")
         or _make_nvidia("meta/llama-3.1-8b-instruct")
@@ -401,7 +401,7 @@ def get_code_llm() -> Any:
     """Melhor LLM para geração de código."""
     return (
         _make_cerebras("llama3.3-70b")
-        or _make_google("gemini-2.0-flash")
+        or _make_google("gemini-1.5-flash")
         or _make_groq("llama-3.3-70b-versatile")
         or _make_nvidia("qwen/qwen2.5-coder-32b-instruct")
         or _make_together("Qwen/Qwen2.5-Coder-32B-Instruct")
