@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 _PROVIDERS = [
     {"provider": "cerebras",    "model": "llama3.3-70b",                             "key_field": "cerebras_api_key"},
-    {"provider": "google",      "model": "gemini-1.5-flash",                         "key_field": "google_api_key"},
+    {"provider": "google",      "model": "gemini-2.5-flash",                         "key_field": "google_api_key"},
     {"provider": "groq",        "model": "llama-3.1-8b-instant",                     "key_field": "groq_api_key"},
     {"provider": "groq",        "model": "llama-3.3-70b-versatile",                  "key_field": "groq_api_key"},
     {"provider": "nvidia",      "model": "meta/llama-3.1-8b-instruct",               "key_field": "nvidia_api_key"},
