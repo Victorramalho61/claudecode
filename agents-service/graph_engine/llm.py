@@ -140,6 +140,24 @@ def _make_deepinfra(model: str = "meta-llama/Meta-Llama-3.1-8B-Instruct") -> Any
         return None
 
 
+def _make_fireworks(model: str = "accounts/fireworks/models/llama-v3p1-8b-instruct") -> Any | None:
+    s = get_settings()
+    if not s.fireworks_api_key:
+        return None
+    try:
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model=model,
+            api_key=s.fireworks_api_key,
+            base_url="https://api.fireworks.ai/inference/v1",
+            temperature=0,
+            max_tokens=4096,
+        )
+    except Exception as e:
+        log.warning("Fireworks AI indisponível: %s", e)
+        return None
+
+
 def _make_huggingface(model: str = "mistralai/Mistral-7B-Instruct-v0.3") -> Any | None:
     s = get_settings()
     if not s.huggingface_api_key:
@@ -336,6 +354,7 @@ def get_reasoning_llm() -> Any:
         or _make_openrouter("qwen/qwen-2.5-7b-instruct:free")
         or _make_mistral("mistral-small-latest")
         or _make_deepinfra("meta-llama/Meta-Llama-3.1-70B-Instruct")
+        or _make_fireworks("accounts/fireworks/models/llama-v3p1-70b-instruct")
         or _make_huggingface()
         or _make_ollama()
     )
@@ -352,6 +371,7 @@ def get_fast_llm() -> Any:
         or _make_openrouter("google/gemma-2-9b-it:free")
         or _make_mistral("mistral-small-latest")
         or _make_deepinfra("meta-llama/Meta-Llama-3.1-8B-Instruct")
+        or _make_fireworks("accounts/fireworks/models/llama-v3p1-8b-instruct")
         or _make_ollama()
     )
 
@@ -366,6 +386,7 @@ def get_code_llm() -> Any:
         or _make_openrouter("qwen/qwen-2.5-coder-7b-instruct:free")
         or _make_mistral("codestral-latest")
         or _make_deepinfra("Qwen/Qwen2.5-Coder-32B-Instruct")
+        or _make_fireworks("accounts/fireworks/models/qwen2p5-coder-32b-instruct")
         or _make_groq("llama3-70b-8192")
         or _make_ollama("codellama:latest")
         or _make_ollama()
@@ -382,6 +403,7 @@ def get_all_llms() -> list[Any]:
         _make_openrouter(),
         _make_mistral(),
         _make_deepinfra(),
+        _make_fireworks(),
         _make_huggingface(),
         _make_ollama(),
     ]

@@ -24,7 +24,8 @@ class Settings(BaseSettings):
     mistral_api_key: str = ""          # mistral.ai — free tier (mistral-small)
     huggingface_api_key: str = ""      # huggingface.co — free inference API
     nvidia_api_key: str = ""           # build.nvidia.com — NIM free tier (Llama, Mistral, etc.)
-    deepinfra_api_key: str = ""        # deepinfra.com — free tier, OpenAI-compat
+    deepinfra_api_key: str = ""        # deepinfra.com — requer saldo, OpenAI-compat
+    fireworks_api_key: str = ""        # fireworks.ai — free tier com créditos, OpenAI-compat
     # GitHub para agentes de docs/code
     github_token: str = ""
     github_repo: str = ""
